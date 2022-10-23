@@ -10,7 +10,7 @@ export class AnswersController {
 
   @Post()
   async addAnswer(@Param('section') section: number, @Param('question') question: number, @Body() addAnswerDto: AddAnswerDto) {
-    const q = await this.questions.question({ sectionId: section, id: question });
+    const q = await this.questions.getQuestionById(section, question);
     const answer = await this.answers.addAnswer(q.id, addAnswerDto.title);
     return {
       id: answer.id,
@@ -20,6 +20,6 @@ export class AnswersController {
 
   @Get(':answer')
   async getAnswer(@Param('sections') section: number, @Param('question') question: number, @Param('answer') answer: number) {
-    return await this.answers.getAnswers({ question: { id: question, sectionId: section } });
+    return await this.answers.getAnswers(section, question);
   }
 }

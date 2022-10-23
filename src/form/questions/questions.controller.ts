@@ -10,15 +10,12 @@ export class QuestionsController {
 
   @Get(':question')
   async getQuestion(@Param('section') section: number, @Param('question') question: number) {
-    return await this.questions.question({
-      sectionId: section,
-      id: question
-    });
+    return await this.questions.getQuestionById(section, question);
   }
 
   @Get()
   async getAllQuestions(@Param('section') section: number) {
-    return await this.questions.questions({ sectionId: section });
+    return await this.questions.getQuestionsBySection(section);
   }
 
   @Post()
@@ -35,17 +32,17 @@ export class QuestionsController {
   }
 
   @Patch(':question')
-  async editQuestion(@Param('question') question: number, @Body() editQuestionDto: EditQuestionDto) {
+  async editQuestion(@Param('section') section, @Param('question') question: number, @Body() editQuestionDto: EditQuestionDto) {
     const { title, type, required, hasOther } = editQuestionDto;
-    const q = await this.questions.editQuestion({ id: question }, title, type, required, hasOther);
+    await this.questions.editQuestion(section, question, title, type, required, hasOther);
     return {
       message: "Question modified successfully"
     };
   }
 
   @Patch(':question')
-  async deleteQuestion(@Param('question') question: number) {
-    await this.questions.deleteQuestion({ id: question });
+  async deleteQuestion(@Param('section') section, @Param('question') question: number) {
+    await this.questions.deleteQuestion(section, question);
     return {
       message: "Question deleted successfully"
     };
