@@ -11,12 +11,12 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  fullname  String
-  email     String    @unique
-  password  String?
-  privilege Privilege @default(MEMBER)
-  Token     Token[]
+  id          Int         @id @default(autoincrement())
+  fullname    String  
+  email       String      @unique
+  password    String  
+  privilege   Privilege   @default(MEMBER)
+  Token       Token[]
 }
 
 model Condition {
