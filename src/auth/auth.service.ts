@@ -1,4 +1,4 @@
-import { Injectable, NotAcceptableException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotAcceptableException } from '@nestjs/common';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
@@ -9,12 +9,9 @@ export class AuthService {
 
   async validateUser(email: string, password: string) {
     const user = await this.users.user({ email });
-    if (!user) {
-      throw new NotAcceptableException("Could not find user");
-    }
     if (user && await bcrypt.compare(password, user.password)) {
       return user;
     }
-    return null;
+    throw new HttpException("Wrong credentials", HttpStatus.BAD_REQUEST);
   }
 }
