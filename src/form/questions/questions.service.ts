@@ -10,7 +10,7 @@ export class QuestionsService {
   private handleQueryException(error: any, entity: string = 'Question') {
     Logger.error(error);
     if (error instanceof NotFoundError) {
-      throw new NotFoundError(`${entity} not found`);
+      throw new NotFoundException()
     } else {
       throw new HttpException("An error has occured", HttpStatus.INTERNAL_SERVER_ERROR);
     }

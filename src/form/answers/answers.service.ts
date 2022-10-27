@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { NotFoundError } from '@prisma/client/runtime';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -10,7 +10,7 @@ export class AnswersService {
   private handleQueryException(error: any, entity: string = 'Answer') {
     Logger.error(error);
     if (error instanceof NotFoundError) {
-      throw new NotFoundError(`${entity} not found`);
+      throw new NotFoundException();
     } else {
       throw new HttpException("An error has occured", HttpStatus.INTERNAL_SERVER_ERROR);
     }
