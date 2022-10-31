@@ -10,11 +10,11 @@ export class LocalSerializer extends PassportSerializer {
   }
  
   serializeUser(user: User, done: CallableFunction) {
-    done(null, user.id);
+    done(null, user.email);
   }
  
-  async deserializeUser(userId: string, done: CallableFunction) {
-    const user = await this.usersService.user({ id: Number(userId) });
+  async deserializeUser(email: string, done: CallableFunction) {
+    const user = await this.usersService.userSafe({ email });
     done(null, user);
   }
 }

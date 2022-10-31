@@ -1,7 +1,8 @@
-import { Controller, HttpCode, Post, Req, Request, UseGuards } from '@nestjs/common';
+import { Controller, HttpCode, Post, Request, Response, UseGuards } from '@nestjs/common';
 import { CookieAuthenticationGuard } from './cookieAuthentication.guard';
 import { LogInWithCredentialsGuard } from './logInWithCredentials.guard';
 import { RequestWithUser } from './requestWithUser.interface';
+import { Response as ExpressResponse } from "express";
 
 @Controller('auth')
 export class AuthController {
@@ -16,8 +17,13 @@ export class AuthController {
   @Post('logout')
   @HttpCode(200)
   @UseGuards(CookieAuthenticationGuard)
-  async logOut(@Request() request: RequestWithUser) {
+  async logOut(@Request() request: RequestWithUser, @Response() response: ExpressResponse) {
     // @ts-ignore
-    request.logOut();
+    request.logout(request.user, (err: any, next: any) => {
+      if (err) next(err);
+      response.json({
+        message: "Logged out successfully"
+      });
+    });
   }
 }
