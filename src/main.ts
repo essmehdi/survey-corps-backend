@@ -7,6 +7,12 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    credentials: true,
+    origin: true
+  });
+
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true,
@@ -19,7 +25,11 @@ async function bootstrap() {
     session({
       secret: configService.get('SESSION_SECRET'),
       resave: false,
-      saveUninitialized: false
+      saveUninitialized: false,
+      cookie: {
+        sameSite: 'lax',
+        httpOnly: true
+      }
     })
   );
 
