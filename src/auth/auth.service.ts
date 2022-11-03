@@ -1,10 +1,11 @@
-import { HttpException, HttpStatus, Injectable, NotAcceptableException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, NotAcceptableException } from '@nestjs/common';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
+  
   constructor (private users: UsersService) {}
 
   async validateUser(email: string, password: string) {
@@ -13,6 +14,6 @@ export class AuthService {
       const strippedUser = { email: user.email, fullname: user.fullname, privilege: user.privilege };
       return strippedUser;
     }
-    throw new HttpException("Wrong credentials", HttpStatus.BAD_REQUEST);
+    throw new BadRequestException("Wrong credentials");
   }
 }

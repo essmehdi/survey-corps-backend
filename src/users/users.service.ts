@@ -3,8 +3,8 @@ import { Prisma, Privilege, User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
-import { NotFoundError } from 'rxjs';
 import * as bcrypt from 'bcrypt';
+import { NotFoundError } from '@prisma/client/runtime';
 
 const charsPool = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_-=+";
 
