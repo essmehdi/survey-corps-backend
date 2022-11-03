@@ -70,7 +70,7 @@ export class UsersService {
 
   async createUser(fullname: string, email: string, privilege: Privilege = 'MEMBER') {
     // Generate a random password for the user
-    const randomPassword = UsersService.generatePassword(12);
+    const randomPassword = process.env.NODE_ENV === 'production' ? UsersService.generatePassword(12) : 'password';
     try {
       // Create the user
       await this.prisma.user.create({
