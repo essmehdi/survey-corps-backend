@@ -11,7 +11,8 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(LogInWithCredentialsGuard)
   async logIn(@Request() request: RequestWithUser) {
-    return request.user;
+    const { fullname, email, privilege } = request.user;
+    return { fullname, email, privilege };
   }
 
   @Post('logout')

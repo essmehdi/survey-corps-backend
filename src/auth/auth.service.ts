@@ -11,8 +11,7 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     const user = await this.users.user({ email }, true);
     if (user && await bcrypt.compare(password, user.password)) {
-      const strippedUser = { email: user.email, fullname: user.fullname, privilege: user.privilege };
-      return strippedUser;
+      return user;
     }
     throw new BadRequestException("Wrong credentials");
   }
