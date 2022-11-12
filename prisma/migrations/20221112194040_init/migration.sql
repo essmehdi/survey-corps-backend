@@ -16,6 +16,7 @@ CREATE TABLE `Condition` (
     `questionId` INTEGER NOT NULL,
     `answerId` INTEGER NOT NULL,
     `nextSectionId` INTEGER NOT NULL,
+    `sectionId` INTEGER NOT NULL,
 
     UNIQUE INDEX `Condition_questionId_key`(`questionId`),
     UNIQUE INDEX `Condition_answerId_key`(`answerId`),
@@ -26,10 +27,8 @@ CREATE TABLE `Condition` (
 CREATE TABLE `QuestionSection` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `title` VARCHAR(191) NOT NULL,
-    `nextConditionId` INTEGER NULL,
     `nextSectionId` INTEGER NULL,
 
-    UNIQUE INDEX `QuestionSection_nextConditionId_key`(`nextConditionId`),
     UNIQUE INDEX `QuestionSection_nextSectionId_key`(`nextSectionId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -74,7 +73,7 @@ CREATE TABLE `Submission` (
 CREATE TABLE `Token` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `token` VARCHAR(191) NOT NULL,
-    `userId` INTEGER NOT NULL,
+    `userId` INTEGER NULL,
 
     UNIQUE INDEX `Token_token_key`(`token`),
     PRIMARY KEY (`id`)
@@ -100,7 +99,7 @@ ALTER TABLE `Condition` ADD CONSTRAINT `Condition_answerId_fkey` FOREIGN KEY (`a
 ALTER TABLE `Condition` ADD CONSTRAINT `Condition_nextSectionId_fkey` FOREIGN KEY (`nextSectionId`) REFERENCES `QuestionSection`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `QuestionSection` ADD CONSTRAINT `QuestionSection_nextConditionId_fkey` FOREIGN KEY (`nextConditionId`) REFERENCES `Condition`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Condition` ADD CONSTRAINT `Condition_sectionId_fkey` FOREIGN KEY (`sectionId`) REFERENCES `QuestionSection`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `QuestionSection` ADD CONSTRAINT `QuestionSection_nextSectionId_fkey` FOREIGN KEY (`nextSectionId`) REFERENCES `QuestionSection`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -124,4 +123,4 @@ ALTER TABLE `Submission` ADD CONSTRAINT `Submission_answerId_fkey` FOREIGN KEY (
 ALTER TABLE `Submission` ADD CONSTRAINT `Submission_tokenId_fkey` FOREIGN KEY (`tokenId`) REFERENCES `Token`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Token` ADD CONSTRAINT `Token_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Token` ADD CONSTRAINT `Token_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

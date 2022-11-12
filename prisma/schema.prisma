@@ -27,7 +27,8 @@ model Condition {
   answerId      Int               @unique
   nextSection   QuestionSection   @relation("NextSection", fields: [nextSectionId], references: [id])
   nextSectionId Int
-  section       QuestionSection?
+  section       QuestionSection   @relation("ConditionSection", fields: [sectionId], references: [id])
+  sectionId     Int
 }
 
 model QuestionSection {
@@ -36,9 +37,7 @@ model QuestionSection {
   questions         Question[]  
   conditioned       Condition[]       @relation("NextSection")
   
-  // This is for conditional section
-  nextCondition     Condition?        @relation(fields: [nextConditionId], references: [id])
-  nextConditionId   Int?              @unique
+  conditions        Condition[]       @relation("ConditionSection")
 
   // This is for direct section succession
   nextSection       QuestionSection?  @relation(name: "SectionSuccession", fields: [nextSectionId], references: [id])
