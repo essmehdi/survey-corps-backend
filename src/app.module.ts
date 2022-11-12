@@ -7,10 +7,13 @@ import { UsersModule } from './users/users.module';
 import { FormModule } from './form/form.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { ApplicationModule } from './application/application.module';
+import { PrismaService } from './prisma/prisma.service';
+import { TokensModule } from './tokens/tokens.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, FormModule, AuthModule, ConfigModule.forRoot({ isGlobal: true })],
+  imports: [PrismaModule, UsersModule, FormModule, AuthModule, ConfigModule.forRoot({ isGlobal: true }), ApplicationModule, TokensModule],
   controllers: [AppController],
-  providers: [AppService, UsersService],
+  providers: [AppService, UsersService]
 })
 export class AppModule {}
