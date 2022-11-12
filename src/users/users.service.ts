@@ -34,14 +34,6 @@ export class UsersService {
     }
   }
 
-  async userSafe(userWhereUniqueInput: Prisma.UserWhereUniqueInput, allFields: boolean = false): Promise<User | null> {
-    try {
-      return await this.prisma.user.findUniqueOrThrow({ where: userWhereUniqueInput, select: allFields ? UsersService.ALL_PROJECTION : UsersService.PUBLIC_PROJECTION });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
-  }
-
   async user(userWhereUniqueInput: Prisma.UserWhereUniqueInput, allFields: boolean = false): Promise<User | null> {
     try {
       return await this.prisma.user.findUniqueOrThrow({ where: userWhereUniqueInput, select: allFields ? UsersService.ALL_PROJECTION : UsersService.PUBLIC_PROJECTION });

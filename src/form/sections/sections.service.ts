@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NotFoundError } from 'rxjs';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ConditionDto } from '../dto/ChangeNextSectionDto';
 
 @Injectable()
 export class SectionsService {
@@ -43,5 +44,49 @@ export class SectionsService {
 
   async deleteSection(sectionId: number) {
     await this.prisma.questionSection.delete({ where: { id: sectionId } });
+  }
+
+  async setSectionNext(id: number, nextSection: number) {
+    try {
+      await this.prisma.questionSection.update({
+        where: { id },
+        data: {
+          nextSection: {
+            connect: {
+              id: nextSection
+            }
+          },
+          conditions: {
+            deleteMany: {}
+          }
+        }
+      });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
+
+  async setConditionNext(id: number, condition: ConditionDto) {
+    try {
+      await this.prisma.questionSection.update({
+        where: { id },
+        data: {
+          conditions: {
+            create: Object.entries(condition.answers).map(([answer, section]) => {
+              return {
+                nextSection: { connect: { id: section } },
+                answer: { connect: { id: +answer } },
+                question: { connect: { id: condition.question } }
+              }
+            })
+          },
+          nextSection: {
+            delete: true
+          }
+        }
+      });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
   }
 }
