@@ -8,7 +8,7 @@ import { SectionsController } from './sections/sections.controller';
 import { AnswersController } from './answers/answers.controller';
 
 @Module({
-  providers: [QuestionsService, PrismaService, AnswersService, SectionsService],
+  providers: [QuestionsService, AnswersService, SectionsService],
   controllers: [QuestionsController, SectionsController, AnswersController]
 })
 export class FormModule {}
