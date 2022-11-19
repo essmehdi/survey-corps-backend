@@ -15,7 +15,7 @@ export class QuestionsController {
 
   @Get()
   async getAllQuestions(@Param('section') section: number) {
-    return await this.questions.getQuestionsBySection(section);
+    return await this.questions.getQuestionsBySectionInOrder(section);
   }
 
   @Post()
@@ -25,7 +25,9 @@ export class QuestionsController {
       addQuestionDto.type,
       sectionId,
       addQuestionDto.required,
-      addQuestionDto.hasOther
+      addQuestionDto.hasOther,
+      addQuestionDto.regex,
+      addQuestionDto.previous
     );
 
     return newQuestion;

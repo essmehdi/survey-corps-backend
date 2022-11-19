@@ -2,11 +2,12 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["filteredRelationCount"]
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -16,7 +17,7 @@ model User {
   email       String      @unique
   password    String  
   privilege   Privilege   @default(MEMBER)
-  Token       Token[]
+  tokens      Token[]
 }
 
 model Condition {
@@ -53,6 +54,7 @@ model Question {
   hasOther          Boolean?
   submissions       Submission[]
   answers           Answer[]
+  regex             String?
 
   nextQuestion      Question?         @relation(name: "QuestionSuccession", fields: [nextQuestionId], references: [id])
   nextQuestionId    Int?              @unique  
@@ -89,18 +91,21 @@ model Submission {
 }
 
 model Token {
-  id          Int          @id @default(autoincrement())
-  token       String       @unique
-  user        User?        @relation(fields: [userId], references: [id])
-  userId      Int?
-  Submission  Submission[]
+  id            Int          @id @default(autoincrement())
+  token         String       @unique
+  user          User?        @relation(fields: [userId], references: [id])
+  userId        Int?
+  application   Application?
+  submissions   Submission[]
 }
 
 model Application {
   id          Int                   @id @default(autoincrement())
   fullname    String
-  email       String          
+  email       String                @unique
   status      ApplicationStatus     @default(PENDING)
+  token       Token?                @relation(fields: [tokenId], references: [id])
+  tokenId     Int?                  @unique
 }
 
 enum ApplicationStatus {

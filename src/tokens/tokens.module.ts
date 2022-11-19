@@ -6,5 +6,6 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 @Module({
   providers: [TokensService],
   controllers: [TokensController],
+  exports: [TokensService]
 })
 export class TokensModule {}

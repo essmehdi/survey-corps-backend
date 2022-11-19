@@ -18,13 +18,19 @@ export class ApplicationController {
     return await this.applications.getApplication(applicationId);
   }
 
-  @Patch(':application/accept')
+  @Post(':application/accept')
   async acceptApplication(@Param('application') applicationId: number) {
-    return await this.applications.respondToApplication(applicationId, 'GRANTED');
+    await this.applications.respondToApplication(applicationId, 'GRANTED');
+    return {
+      message: "The application has been successfully accepted"
+    };
   }
 
-  @Patch(':application/reject')
+  @Post(':application/reject')
   async rejectApplication(@Param('application') applicationId: number) {
-    return await this.applications.respondToApplication(applicationId, 'REJECTED');
+    await this.applications.respondToApplication(applicationId, 'REJECTED');
+    return {
+      message: "The application has been successfully rejected"
+    };
   }
 }

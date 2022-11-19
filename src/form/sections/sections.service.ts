@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable, Logger, NotFoundException } from
 import { NotFoundError } from 'rxjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConditionDto } from '../dto/ChangeNextSectionDto';
+import { QuestionsService } from '../questions/questions.service';
 
 @Injectable()
 export class SectionsService {
@@ -27,10 +28,10 @@ export class SectionsService {
         where: { id: sectionId },
         include: {
           questions: {
-            include: {
-              answers: true
-            }
+            select: QuestionsService.QUESTION_PROJECTION
           },
+          nextSection: true,
+          conditions: true
         }
       });
     } catch (error) {

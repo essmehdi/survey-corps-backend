@@ -1,5 +1,5 @@
 import { QuestionType } from "@prisma/client";
-import { ArrayMinSize, ArrayNotEmpty, IsArray, IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf, ValidateNested } from "class-validator";
+import { ArrayMinSize, ArrayNotEmpty, IsArray, IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateIf, ValidateNested } from "class-validator";
 import { AddAnswerDto } from "./AddAnswerDto";
 
 export class AddQuestionDto {
@@ -16,6 +16,14 @@ export class AddQuestionDto {
   @ValidateIf(o => o.type !== 'FREEFIELD')
   @IsBoolean()
   hasOther: boolean;
+
+  @IsString()
+  @IsOptional()
+  regex?: string;
+
+  @IsNumber()
+  @IsOptional()
+  previous?: number;
 
   // @ValidateIf(o => o.type !== 'FREEFIELD')
   // @IsArray()

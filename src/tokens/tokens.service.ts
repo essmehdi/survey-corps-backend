@@ -36,6 +36,17 @@ export class TokensService {
   }
 
   /**
+   * Generates a new submission token (for form applications)
+   */
+  async generateToken() {
+    return await this.prisma.token.create({
+      data: {
+        token: randomUUID()
+      }
+    });
+  }
+
+  /**
    * Gets the token by ID
    * @param tokenId ID of the token
    */

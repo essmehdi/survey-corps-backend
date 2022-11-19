@@ -3,7 +3,7 @@ import { AddAnswerDto } from '../dto/AddAnswerDto';
 import { QuestionsService } from '../questions/questions.service';
 import { AnswersService } from './answers.service';
 
-@Controller(':section/questions/:question/answers')
+@Controller('sections/:section/questions/:question/answers')
 export class AnswersController {
 
   constructor (private answers: AnswersService, private questions: QuestionsService) {}

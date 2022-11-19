@@ -5,18 +5,18 @@ export class EditQuestionDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
-  title: string;
+  title?: string;
   
   @IsEnum(QuestionType)
   @IsOptional()
-  type: QuestionType;
+  type?: QuestionType;
 
   @IsBoolean()
   @IsOptional()
-  required: boolean;
+  required?: boolean;
 
   @ValidateIf(o => o.type !== 'FREEFIELD')
   @IsBoolean()
   @IsOptional()
-  hasOther: boolean;
+  hasOther?: boolean;
 }
