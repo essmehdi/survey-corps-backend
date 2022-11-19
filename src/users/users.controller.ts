@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { RegisterUserDto } from './dto/RegisterUserDto';
 import { UsersService } from './users.service';
 
@@ -14,5 +14,10 @@ export class UsersController {
     return {
       message: "User successfully registered"
     };
+  }
+
+  @Get('leaderboard')
+  async leaderboard() {
+    return this.users.getLeaderboard();
   }
 }

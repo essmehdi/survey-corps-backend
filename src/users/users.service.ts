@@ -1,4 +1,4 @@
-import { ConflictException, HttpCode, HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, LoggerService, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, Privilege, User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as nodemailer from 'nodemailer';
@@ -11,7 +11,8 @@ const charsPool = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
-  private static PUBLIC_PROJECTION = { id: false, fullname: true, email: true, password: false, privilege: true };
+  private static PRIVATE_PROJECTION = { id: false, fullname: true, email: true, password: false, privilege: true };
+  private static PUBLIC_PROJECTION = { id: false, fullname: true, email: true, password: false, privilege: false };
   private static ALL_PROJECTION = { id: true, fullname: true, email: true, password: true, privilege: true };
 
   constructor(private prisma: PrismaService, private config: ConfigService){}
@@ -36,7 +37,7 @@ export class UsersService {
 
   async user(userWhereUniqueInput: Prisma.UserWhereUniqueInput, allFields: boolean = false): Promise<User | null> {
     try {
-      return await this.prisma.user.findUniqueOrThrow({ where: userWhereUniqueInput, select: allFields ? UsersService.ALL_PROJECTION : UsersService.PUBLIC_PROJECTION });
+      return await this.prisma.user.findUniqueOrThrow({ where: userWhereUniqueInput, select: allFields ? UsersService.ALL_PROJECTION : UsersService.PRIVATE_PROJECTION });
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -56,8 +57,32 @@ export class UsersService {
       cursor,
       where,
       orderBy,
-      select: allFields ? UsersService.ALL_PROJECTION : UsersService.PUBLIC_PROJECTION
+      select: allFields ? UsersService.ALL_PROJECTION : UsersService.PRIVATE_PROJECTION
     });
+  }
+
+  async getLeaderboard() {
+    return (await this.prisma.user.findMany({
+      where: {
+        tokens: {
+          some: {}
+        }
+      },
+      select: {
+        ...UsersService.PUBLIC_PROJECTION,
+        _count: {
+          select: {
+            tokens: {
+              where: {
+                submissions: {
+                  some: {}
+                }
+              }
+            }      
+          }
+        }
+      }
+    })).map(({ fullname, email, _count }) => ({ fullname, email, count: _count.tokens }));
   }
 
   async createUser(fullname: string, email: string, privilege: Privilege = 'MEMBER') {
