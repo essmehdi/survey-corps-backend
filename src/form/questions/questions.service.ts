@@ -104,33 +104,30 @@ export class QuestionsService {
     }
   }
 
-  async editQuestion(sectionId: number, questionId: number, title?: string, type?: QuestionType, required?: boolean, hasOther?: boolean, previous?: number) {
-    // First, update the previous question (if it exists) to point to the next question (if it exists)
-    // Then, update the new previous question to point to this question and make this question point
-    //        to the new next question
+  // TODO: Complete the reordering logic
+  async reorderQuestion(sectionId: number, questionId: number, previous: number) {
+    const question = await this.prisma.question.findFirst({ where: { sectionId, id: questionId }, include: { previousQuestion: true } });
+  }
 
+  async editQuestion(sectionId: number, questionId: number, title?: string, type?: QuestionType, required?: boolean, hasOther?: boolean) {
+    const question = await this.prisma.question.findFirst({ where: { sectionId, id: questionId } });
 
-    // Get the question and the previous question
+    if (question.type === QuestionType.FREEFIELD && hasOther)
+      hasOther = false;
+
     try {
-      var firstQuestion = await this.prisma.question.findFirst({ where: { previousQuestion: null } });
-      var question = await this.prisma.question.findFirstOrThrow({ where: { section: { id: sectionId }, id: questionId }, include: { previousQuestion: true, nextQuestion: true } });
-      if (previous)
-        var newPrevious = await this.prisma.question.findFirstOrThrow({ where: { section: { id: sectionId }, id: previous }, include: { previousQuestion: true, nextQuestion: true } });
+      await this.prisma.question.updateMany({
+        where: { sectionId, id: questionId },
+        data: {
+          ...(title ? { title } : {} ),
+          ...(type ? { type } : {} ),
+          ...(required ? { required } : {} ),
+          ...(hasOther ? { hasOther } : {} )
+        }
+      });
     } catch (error) {
       this.handleQueryException(error);
     }
-    // Update the previous question
-    if (previous && question.previousQuestion !== null)
-      await this.prisma.question.update({
-        where: { id: question.previousQuestion.id },
-        data: { nextQuestionId: question.nextQuestionId }
-      });
-
-    // if (previous === null) {
-    //   await this.prisma.question.update({
-
-    //   });
-    // }
   }
 
   async deleteQuestion(sectionId: number, questionId: number) {
