@@ -16,15 +16,24 @@ export class AnswersService {
     }
   }
 
-  async addAnswer(questionId: number, title: string) {
-    return await this.prisma.answer.create({
-      data: {
-        title,
-        question: {
-          connect: { id: questionId }
+  async addAnswer(sectionId: number, questionId: number, title: string) {
+    try {
+      var question = await this.prisma.question.findFirstOrThrow({ where: { id: questionId, sectionId }, include: { conditions: true } });
+
+      const newAnswer = await this.prisma.answer.create({
+        data: {
+          title,
+          question: {
+            connect: { id: question.id }
+          }
         }
-      }
-    });
+      });
+
+      return newAnswer;
+
+    } catch (error) {
+      this.handleQueryException(error);
+    }
   }
 
   async getAnswers(sectionId: number, questionId: number) {
@@ -44,10 +53,18 @@ export class AnswersService {
   }
 
   async editAnswer(sectionId: number, questionId: number, anwserId: number, title: string) {
-    return await this.prisma.answer.updateMany({ where: { id: anwserId, question: { id: questionId, sectionId } }, data: { title } });
+    try {
+      return await this.prisma.answer.updateMany({ where: { id: anwserId, question: { id: questionId, sectionId } }, data: { title } });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
   }
 
   async deleteAnswer(sectionId: number, questionId: number, anwserId: number) {
-    return await this.prisma.answer.deleteMany({ where: { id: anwserId, question: { id: questionId, sectionId } } });
+    try {
+      return await this.prisma.answer.deleteMany({ where: { id: anwserId, question: { id: questionId, sectionId } } });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
   }
 }

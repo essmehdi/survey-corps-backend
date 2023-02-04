@@ -11,7 +11,7 @@ export class QuestionsService {
   constructor(private prisma: PrismaService) { }
 
   private handleQueryException(error: any, entity: string = 'Question') {
-    Logger.error(error);
+    this.logger.error(error);
     if (error instanceof NotFoundError) {
       throw new NotFoundException()
     } else {
@@ -20,48 +20,70 @@ export class QuestionsService {
   }
 
   /**
+   * Gets the conditional question associated to a section
+   * @param sectionId Section ID
+   */
+  async getConditionalQuestion(sectionId: number) {
+    return await this.prisma.question.findFirst({
+      where: { section: { id: sectionId }, conditions: { some: {} } }
+    });
+  }
+
+  /**
    * Adds a question into a section
    * @param title Question title
    * @param type Question type
    * @param sectionId Question section ID
    * @param required True if the question is required
-   * @param hasOther True if the question should have a free field
    * @param previous ID of the question that comes before
+   * @param hasOther True if the question should have a free field
+   * @param regex Regular expression to validate input in case of a FREEFIELD question
    */
-  async addQuestion(title: string, type: QuestionType, sectionId: number, required: boolean = false, hasOther?: boolean, regex?: string, previous?: number) {
-    if (previous) {
-      try {
-        var previousQuestion = await this.prisma.question.findUniqueOrThrow({ where: { id: previous } });
-        var emptySection = (await this.prisma.questionSection.findUniqueOrThrow({ where: { id: sectionId } }).questions()).length == 0
-      } catch (error) {
-        this.handleQueryException(error);
+  async addQuestion(title: string, type: QuestionType, sectionId: number, required: boolean = false, previous: number, hasOther?: boolean, regex?: string) {
+    const questionData = { title, type, required, hasOther, regex, section: { connect: { id: sectionId } } };
+    try {
+      const emptySection = (await this.prisma.questionSection.findUniqueOrThrow({ where: { id: sectionId } }).questions()).length === 0;
+      Logger.debug(emptySection);
+      if (emptySection && previous !== null) {
+        // Trying to add to a previous section in an empty section
+        throw new NotFoundException("Previous question was not found: Section is empty");
+      } else if (emptySection && previous === null) {
+        // Empty section so this will be the first question to be created
+        return await this.prisma.question.create({
+          data: questionData
+        });
+      } else if (!emptySection && previous !== null) {
+        // Place question
+        const previousQuestion = await this.prisma.question.findUniqueOrThrow({
+          where: { id: previous }
+        });
+        return await this.prisma.question.create({
+          data: {
+            ...questionData,
+            previousQuestion: { connect: { id: previousQuestion.id } },
+            ...(previousQuestion.nextQuestionId ? {
+              nextQuestion: {
+                connect: { id: previousQuestion.nextQuestionId }
+              }
+            } : {})
+          }
+        });
+      } else { // !emptySection && previous === null
+        // Place question at the first position
+        const firstQuestion = await this.prisma.question.findFirstOrThrow({
+          where: { section: { id: sectionId }, previousQuestion: null }
+        });
+        Logger.debug(firstQuestion);
+        return await this.prisma.question.create({
+          data: {
+            ...questionData,
+            nextQuestion: { connect: { id: firstQuestion.id } }
+          }
+        });
       }
-      if (emptySection) {
-        throw new BadRequestException("Previous question not found: Section is empty");
-      }
+    } catch (error) {
+      this.handleQueryException(error);
     }
-    return await this.prisma.question.create({
-      data: {
-        title,
-        type,
-        required,
-        hasOther,
-        regex,
-        section: { connect: { id: sectionId } },
-        // Add a previous question only if previous is mentioned
-        ...(previous ? {
-          previousQuestion: {
-            connect: { id: previous }
-          },
-          // Change next question if previous is mentioned
-          ...(previousQuestion.nextQuestionId ? {
-            nextQuestion: {
-              connect: { id: previousQuestion.nextQuestionId ?? undefined }
-            }
-          } : {})
-        } : {}),
-      }
-    });
   }
 
   async getQuestionsBySection(sectionId: number) {
@@ -81,7 +103,7 @@ export class QuestionsService {
   async getQuestionsBySectionInOrder(sectionId: number) {
     try {
       var firstQuestion = await this.prisma.question.findFirstOrThrow({ where: { section: { id: sectionId }, previousQuestion: null }, select: QuestionsService.QUESTION_PROJECTION });
-      this.logger.debug(`First question: ${firstQuestion.id} - ${firstQuestion.title}`);
+      Logger.debug(firstQuestion.title);
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -89,7 +111,6 @@ export class QuestionsService {
     let question = firstQuestion;
     while (question && question.nextQuestionId) {
       question = await this.prisma.question.findFirst({ where: { section: { id: sectionId }, id: question.nextQuestionId }, select: QuestionsService.QUESTION_PROJECTION });
-      this.logger.debug(`Next question: ${question.id} - ${question.title}`);
       if (question)
         results.push(question);
     }

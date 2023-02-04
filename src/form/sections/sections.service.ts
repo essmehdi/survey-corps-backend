@@ -1,16 +1,18 @@
-import { HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { NotFoundError } from 'rxjs';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ConditionDto } from '../dto/ChangeNextSectionDto';
+import { ConditionDto } from './dto/ChangeNextSectionDto';
 import { QuestionsService } from '../questions/questions.service';
+import { QuestionSection } from '@prisma/client';
 
 @Injectable()
 export class SectionsService {
+  private readonly logger = new Logger(SectionsService.name);
 
-  constructor (private prisma: PrismaService) {}
+  constructor (private prisma: PrismaService, private questions: QuestionsService) {}
 
   private handleQueryException(error: any, entity: string = 'Section') {
-    Logger.error(error);
+    this.logger.error(error);
     if (error instanceof NotFoundError) {
       throw new NotFoundException();
     } else {
@@ -18,74 +20,190 @@ export class SectionsService {
     }
   }
 
+  /**
+   * Gets the next section or the conditions for next sections
+   * @param section The section object to search next for
+   */
+  private async getSectionNext(section: QuestionSection) {
+    var next = null;
+    if (section.nextSectionId) {
+      next = section.nextSectionId;
+    } else {
+      const conditions = await this.prisma.condition.findMany({
+        where: { question: { section: { id: section.id } } }
+      });
+      if (conditions.length > 0) {
+        next = {
+          question: conditions[0].questionId,
+          answers: {}
+        };
+        conditions.forEach(condition => {
+          next.answers[condition.answerId] = condition.nextSectionId;
+        });
+      }
+    }
+    return next;
+  }
+
+  /**
+   * Gets all registered sections in the database without their questions
+   */
+  async allSections() {
+    return await this.prisma.questionSection.findMany({});
+  }
+
+  /**
+   * Gets all registerec sections in the database with their questions in order
+   */
+  async allSectionsWithOrderedQuestions() {
+    const sections = await this.prisma.questionSection.findMany({  });
+    const result = await Promise.all(sections.map(async section => {
+      delete section['nextSectionId'];
+      return {
+        ...section,
+        questions: await this.questions.getQuestionsBySectionInOrder(section.id),
+        next: await this.getSectionNext(section)
+      };
+    }));
+    return result;
+  }
+
+  /**
+   * Adds a new section in database
+   * @param title Title of the section
+   * @returns 
+   */
   async addSection(title: string) {
     return await this.prisma.questionSection.create({ data: { title } });
   }
 
+  /**
+   * Gets the first section of the form
+   */
+  async firstSection() {
+    try {
+      return await this.prisma.questionSection.findFirstOrThrow({
+        where: { previousSection: null }
+      });
+    } catch (error) {
+      return new InternalServerErrorException("Could not determine first section");
+    }
+  }
+
+  /**
+   * Gets a specific section by ID with questions in order
+   * @param sectionId ID of the section
+   */
   async section(sectionId: number) {
     try {
-      return await this.prisma.questionSection.findUniqueOrThrow({
-        where: { id: sectionId },
-        include: {
-          questions: {
-            select: QuestionsService.QUESTION_PROJECTION
-          },
-          nextSection: true,
-          conditions: true
-        }
+      const result = await this.prisma.questionSection.findUniqueOrThrow({
+        where: { id: sectionId }
       });
+      
+      const next = this.getSectionNext(result);
+      return { ...result, questions: await this.questions.getQuestionsBySectionInOrder(sectionId), next };
+
     } catch (error) {
       this.handleQueryException(error);
     }
   }
 
+  /**
+   * Changes section details
+   * @param sectionId ID of the section
+   * @param title New title for the section
+   */
   async editSection(sectionId: number, title: string) {
     await this.prisma.questionSection.update({ where: { id: sectionId }, data: { title } });
   }
 
+  /**
+   * Removes a section by ID
+   * @param sectionId ID of the section
+   */
   async deleteSection(sectionId: number) {
     await this.prisma.questionSection.delete({ where: { id: sectionId } });
   }
 
+  /**
+   * Sets the next section directly to another section
+   * @param id ID of the target section
+   * @param nextSection ID of the next section
+   */
   async setSectionNext(id: number, nextSection: number) {
     try {
-      await this.prisma.questionSection.update({
-        where: { id },
-        data: {
-          nextSection: {
-            connect: {
-              id: nextSection
+      await this.prisma.$transaction(async tx => {
+        await tx.condition.deleteMany({
+          where: {
+            question: {
+              section: { id },
+              conditions: { some: {} }
             }
-          },
-          conditions: {
-            deleteMany: {}
           }
-        }
+        });
+
+        return await tx.questionSection.update({
+          where: { id },
+          data: {
+            nextSection: {
+              connect: {
+                id: nextSection
+              }
+            }
+          }
+        });
       });
     } catch (error) {
       this.handleQueryException(error);
     }
   }
 
+  /**
+   * Sets the next section conditionnally based on the answer
+   * @param id ID of the section to change
+   * @param condition The conditions and target sections
+   */
   async setConditionNext(id: number, condition: ConditionDto) {
     try {
-      await this.prisma.questionSection.update({
-        where: { id },
-        data: {
-          conditions: {
-            create: Object.entries(condition.answers).map(([answer, section]) => {
-              return {
-                nextSection: { connect: { id: section } },
-                answer: { connect: { id: +answer } },
-                question: { connect: { id: condition.question } }
+      // Check if there is not already a conditional question in section
+      const conditioned = await this.prisma.question.findFirst({ where: { conditions: { some: {} }, section: { id } } });
+      if (conditioned)
+        throw new ConflictException("A conditional question already exists for this section");
+      
+      // Validate the input
+      const question = await this.prisma.question.findFirstOrThrow({ where: { id: condition.question, section: { id } }, include: { answers: true, section: true } });
+      const answersIds = question.answers.map(a => a.id);
+      if (!Object.keys(condition.answers).every(answer => answersIds.includes(+answer))) {
+        throw new NotFoundException("The answers provided could not be found in the question provided");
+      }
+
+      // Create the conditions
+      await this.prisma.$transaction(async tx => {
+        await tx.condition.createMany({
+          data: Object.entries(condition.answers).map(([answer, section]) => {
+            return {
+              nextSectionId: section,
+              answerId: +answer,
+              questionId: condition.question
+            }
+          })
+        });
+
+        if (question.section.nextSectionId) {
+          await tx.questionSection.update({
+            where: { id },
+            data: {
+              nextSection: {
+                delete: true
               }
-            })
-          },
-          nextSection: {
-            delete: true
-          }
+            }
+          });
         }
       });
+
+      return {
+        message: "Conditions added successfully"
+      }
     } catch (error) {
       this.handleQueryException(error);
     }

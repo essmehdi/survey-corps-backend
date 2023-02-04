@@ -24,7 +24,6 @@ CREATE TABLE "Condition" (
     "questionId" INTEGER NOT NULL,
     "answerId" INTEGER NOT NULL,
     "nextSectionId" INTEGER NOT NULL,
-    "sectionId" INTEGER NOT NULL,
 
     CONSTRAINT "Condition_pkey" PRIMARY KEY ("id")
 );
@@ -96,10 +95,10 @@ CREATE TABLE "Application" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Condition_questionId_key" ON "Condition"("questionId");
+CREATE UNIQUE INDEX "Condition_answerId_key" ON "Condition"("answerId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Condition_answerId_key" ON "Condition"("answerId");
+CREATE UNIQUE INDEX "Condition_questionId_answerId_key" ON "Condition"("questionId", "answerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "QuestionSection_nextSectionId_key" ON "QuestionSection"("nextSectionId");
@@ -130,9 +129,6 @@ ALTER TABLE "Condition" ADD CONSTRAINT "Condition_answerId_fkey" FOREIGN KEY ("a
 
 -- AddForeignKey
 ALTER TABLE "Condition" ADD CONSTRAINT "Condition_nextSectionId_fkey" FOREIGN KEY ("nextSectionId") REFERENCES "QuestionSection"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Condition" ADD CONSTRAINT "Condition_sectionId_fkey" FOREIGN KEY ("sectionId") REFERENCES "QuestionSection"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "QuestionSection" ADD CONSTRAINT "QuestionSection_nextSectionId_fkey" FOREIGN KEY ("nextSectionId") REFERENCES "QuestionSection"("id") ON DELETE SET NULL ON UPDATE CASCADE;

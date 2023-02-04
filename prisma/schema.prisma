@@ -3,7 +3,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["filteredRelationCount"]
+  previewFeatures = ["filteredRelationCount", "clientExtensions"]
 }
 
 datasource db {
@@ -23,13 +23,13 @@ model User {
 model Condition {
   id            Int               @id @default(autoincrement())
   question      Question          @relation(fields: [questionId], references: [id])
-  questionId    Int               @unique
+  questionId    Int               
   answer        Answer            @relation(fields: [answerId], references: [id])
   answerId      Int               @unique
   nextSection   QuestionSection   @relation("NextSection", fields: [nextSectionId], references: [id])
   nextSectionId Int
-  section       QuestionSection   @relation("ConditionSection", fields: [sectionId], references: [id])
-  sectionId     Int
+
+  @@unique([questionId, answerId])
 }
 
 model QuestionSection {
@@ -38,8 +38,6 @@ model QuestionSection {
   questions         Question[]  
   conditioned       Condition[]       @relation("NextSection")
   
-  conditions        Condition[]       @relation("ConditionSection")
-
   // This is for direct section succession
   nextSection       QuestionSection?  @relation(name: "SectionSuccession", fields: [nextSectionId], references: [id])
   nextSectionId     Int?              @unique
@@ -63,7 +61,7 @@ model Question {
   section           QuestionSection   @relation(fields: [sectionId], references: [id])
   sectionId         Int
 
-  condition         Condition?
+  conditions        Condition[]
 }
 
 model Answer {

@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { AddQuestionDto } from '../dto/AddQuestionDto';
-import { EditQuestionDto } from '../dto/EditQuestionDto';
+import { AddQuestionDto } from './dto/AddQuestionDto';
+import { EditQuestionDto } from './dto/EditQuestionDto';
 import { QuestionsService } from './questions.service';
 
-@Controller('sections/:section/questions')
+@Controller('admin/sections/:section/questions')
 export class QuestionsController {
 
   constructor (private questions: QuestionsService) {}
@@ -19,22 +19,22 @@ export class QuestionsController {
   }
 
   @Post()
-  async addQuestion(@Param('section') sectionId: number, @Body() addQuestionDto: AddQuestionDto) {
+  async addQuestion(@Param('section') section: number, @Body() addQuestionDto: AddQuestionDto) {
     const newQuestion = await this.questions.addQuestion(
       addQuestionDto.title,
       addQuestionDto.type,
-      sectionId,
+      section,
       addQuestionDto.required,
+      addQuestionDto.previous,
       addQuestionDto.hasOther,
-      addQuestionDto.regex,
-      addQuestionDto.previous
+      addQuestionDto.regex
     );
 
     return newQuestion;
   }
 
   @Patch(':question')
-  async editQuestion(@Param('section') section, @Param('question') question: number, @Body() editQuestionDto: EditQuestionDto) {
+  async editQuestion(@Param('section') section: number, @Param('question') question: number, @Body() editQuestionDto: EditQuestionDto) {
     const { title, type, required, hasOther } = editQuestionDto;
     await this.questions.editQuestion(section, question, title, type, required, hasOther);
     return {
@@ -43,7 +43,7 @@ export class QuestionsController {
   }
 
   @Patch(':question')
-  async deleteQuestion(@Param('section') section, @Param('question') question: number) {
+  async deleteQuestion(@Param('section') section: number, @Param('question') question: number) {
     await this.questions.deleteQuestion(section, question);
     return {
       message: "Question deleted successfully"
