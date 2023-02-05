@@ -67,7 +67,7 @@ export class SectionsService {
   }
 
   /**
-   * Gets all registerec sections in the database with their questions in order
+   * Gets all registered sections in the database with their questions in order
    */
   async allSectionsWithOrderedQuestions() {
     const sections = await this.prisma.questionSection.findMany({});
