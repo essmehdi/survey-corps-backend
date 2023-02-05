@@ -12,6 +12,7 @@ export class ApplicationController {
     return await this.applications.addApplication(fullname, email);
   }
 
+  }
   @Get(":application")
   async getApplication(@Param("application") applicationId: number) {
     return await this.applications.getApplication(applicationId);
