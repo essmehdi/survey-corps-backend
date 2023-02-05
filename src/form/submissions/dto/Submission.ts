@@ -19,6 +19,7 @@ export class Submission {
   answerId?: number | number[];
 
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   other?: string;
 }
