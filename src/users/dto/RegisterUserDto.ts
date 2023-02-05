@@ -1,5 +1,11 @@
 import { Privilege } from "@prisma/client";
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString
+} from "class-validator";
 
 export class RegisterUserDto {
   @IsString()
@@ -12,5 +18,5 @@ export class RegisterUserDto {
 
   @IsEnum(Privilege)
   @IsOptional()
-  privilege: Privilege
+  privilege: Privilege;
 }

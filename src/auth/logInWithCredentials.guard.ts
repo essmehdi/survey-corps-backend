@@ -3,7 +3,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { Observable } from "rxjs";
 
 @Injectable()
-export class LogInWithCredentialsGuard extends AuthGuard('local') {
+export class LogInWithCredentialsGuard extends AuthGuard("local") {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     await super.canActivate(context);
 

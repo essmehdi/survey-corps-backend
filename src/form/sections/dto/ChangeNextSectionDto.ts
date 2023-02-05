@@ -1,5 +1,15 @@
 import { Type } from "class-transformer";
-import { IsEnum, IsNumber, IsObject, IsPositive, registerDecorator, ValidateIf, ValidationArguments, ValidationOptions, Validator } from "class-validator";
+import {
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsPositive,
+  registerDecorator,
+  ValidateIf,
+  ValidationArguments,
+  ValidationOptions,
+  Validator
+} from "class-validator";
 
 export enum NextSectionType {
   SECTION = "section",
@@ -9,16 +19,19 @@ export enum NextSectionType {
 function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
-      name: 'isNumberToNumberObject',
+      name: "isNumberToNumberObject",
       target: object.constructor,
       propertyName: propertyName,
       constraints: [],
       options: validationOptions,
       validator: {
         validate(value: any) {
-          return Object.keys(value).every(Number.isNaN) && Object.values(value).every(Number.isNaN);
-        },
-      },
+          return (
+            Object.keys(value).every(Number.isNaN) &&
+            Object.values(value).every(Number.isNaN)
+          );
+        }
+      }
     });
   };
 }
@@ -30,17 +43,17 @@ export class ConditionDto {
 
   @IsObject()
   @IsNumberToNumberObject()
-  answers: Record<number,number>;
+  answers: Record<number, number>;
 }
 
 export class ChangeNextSectionDto {
   @IsEnum(NextSectionType)
   type: NextSectionType;
 
-  @ValidateIf(self => self.type === NextSectionType.SECTION)
+  @ValidateIf((self) => self.type === NextSectionType.SECTION)
   section: number;
 
-  @ValidateIf(self => self.type === NextSectionType.CONDITION)
+  @ValidateIf((self) => self.type === NextSectionType.CONDITION)
   @Type(() => ConditionDto)
   condition: ConditionDto;
 }

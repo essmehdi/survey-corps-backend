@@ -1,13 +1,18 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
-import { NotFoundError } from '@prisma/client/runtime';
-import { randomUUID } from 'crypto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException
+} from "@nestjs/common";
+import { NotFoundError } from "@prisma/client/runtime";
+import { randomUUID } from "crypto";
+import { PrismaService } from "src/prisma/prisma.service";
 
 @Injectable()
 export class TokensService {
   private readonly logger = new Logger(TokensService.name);
 
-  constructor (private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
   private handleQueryException(error: any) {
     this.logger.error(error);
@@ -52,7 +57,9 @@ export class TokensService {
    */
   async getToken(tokenId: number) {
     try {
-      return await this.prisma.token.findUniqueOrThrow({ where: { id: tokenId } });
+      return await this.prisma.token.findUniqueOrThrow({
+        where: { id: tokenId }
+      });
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -61,7 +68,7 @@ export class TokensService {
   /**
    * Revokes the token
    * @param tokenId ID of the token to remove
-   * @returns 
+   * @returns
    */
   async removeToken(tokenId: number) {
     return await this.prisma.token.delete({ where: { id: tokenId } });

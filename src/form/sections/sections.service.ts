@@ -1,22 +1,36 @@
-import { ConflictException, HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
-import { NotFoundError } from 'rxjs';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ConditionDto } from './dto/ChangeNextSectionDto';
-import { QuestionsService } from '../questions/questions.service';
-import { QuestionSection } from '@prisma/client';
+import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException
+} from "@nestjs/common";
+import { NotFoundError } from "rxjs";
+import { PrismaService } from "src/prisma/prisma.service";
+import { ConditionDto } from "./dto/ChangeNextSectionDto";
+import { QuestionsService } from "../questions/questions.service";
+import { QuestionSection } from "@prisma/client";
 
 @Injectable()
 export class SectionsService {
   private readonly logger = new Logger(SectionsService.name);
 
-  constructor (private prisma: PrismaService, private questions: QuestionsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private questions: QuestionsService
+  ) {}
 
-  private handleQueryException(error: any, entity: string = 'Section') {
+  private handleQueryException(error: any, entity: string = "Section") {
     this.logger.error(error);
     if (error instanceof NotFoundError) {
       throw new NotFoundException();
     } else {
-      throw new HttpException("An error has occured", HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        "An error has occured",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -37,7 +51,7 @@ export class SectionsService {
           question: conditions[0].questionId,
           answers: {}
         };
-        conditions.forEach(condition => {
+        conditions.forEach((condition) => {
           next.answers[condition.answerId] = condition.nextSectionId;
         });
       }
@@ -56,22 +70,26 @@ export class SectionsService {
    * Gets all registerec sections in the database with their questions in order
    */
   async allSectionsWithOrderedQuestions() {
-    const sections = await this.prisma.questionSection.findMany({  });
-    const result = await Promise.all(sections.map(async section => {
-      delete section['nextSectionId'];
-      return {
-        ...section,
-        questions: await this.questions.getQuestionsBySectionInOrder(section.id),
-        next: await this.getSectionNext(section)
-      };
-    }));
+    const sections = await this.prisma.questionSection.findMany({});
+    const result = await Promise.all(
+      sections.map(async (section) => {
+        delete section["nextSectionId"];
+        return {
+          ...section,
+          questions: await this.questions.getQuestionsBySectionInOrder(
+            section.id
+          ),
+          next: await this.getSectionNext(section)
+        };
+      })
+    );
     return result;
   }
 
   /**
    * Adds a new section in database
    * @param title Title of the section
-   * @returns 
+   * @returns
    */
   async addSection(title: string) {
     return await this.prisma.questionSection.create({ data: { title } });
@@ -86,7 +104,9 @@ export class SectionsService {
         where: { previousSection: null }
       });
     } catch (error) {
-      return new InternalServerErrorException("Could not determine first section");
+      return new InternalServerErrorException(
+        "Could not determine first section"
+      );
     }
   }
 
@@ -99,10 +119,13 @@ export class SectionsService {
       const result = await this.prisma.questionSection.findUniqueOrThrow({
         where: { id: sectionId }
       });
-      
-      const next = this.getSectionNext(result);
-      return { ...result, questions: await this.questions.getQuestionsBySectionInOrder(sectionId), next };
 
+      const next = this.getSectionNext(result);
+      return {
+        ...result,
+        questions: await this.questions.getQuestionsBySectionInOrder(sectionId),
+        next
+      };
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -114,7 +137,10 @@ export class SectionsService {
    * @param title New title for the section
    */
   async editSection(sectionId: number, title: string) {
-    await this.prisma.questionSection.update({ where: { id: sectionId }, data: { title } });
+    await this.prisma.questionSection.update({
+      where: { id: sectionId },
+      data: { title }
+    });
   }
 
   /**
@@ -132,7 +158,7 @@ export class SectionsService {
    */
   async setSectionNext(id: number, nextSection: number) {
     try {
-      await this.prisma.$transaction(async tx => {
+      await this.prisma.$transaction(async (tx) => {
         await tx.condition.deleteMany({
           where: {
             question: {
@@ -166,26 +192,39 @@ export class SectionsService {
   async setConditionNext(id: number, condition: ConditionDto) {
     try {
       // Check if there is not already a conditional question in section
-      const conditioned = await this.prisma.question.findFirst({ where: { conditions: { some: {} }, section: { id } } });
+      const conditioned = await this.prisma.question.findFirst({
+        where: { conditions: { some: {} }, section: { id } }
+      });
       if (conditioned)
-        throw new ConflictException("A conditional question already exists for this section");
-      
+        throw new ConflictException(
+          "A conditional question already exists for this section"
+        );
+
       // Validate the input
-      const question = await this.prisma.question.findFirstOrThrow({ where: { id: condition.question, section: { id } }, include: { answers: true, section: true } });
-      const answersIds = question.answers.map(a => a.id);
-      if (!Object.keys(condition.answers).every(answer => answersIds.includes(+answer))) {
-        throw new NotFoundException("The answers provided could not be found in the question provided");
+      const question = await this.prisma.question.findFirstOrThrow({
+        where: { id: condition.question, section: { id } },
+        include: { answers: true, section: true }
+      });
+      const answersIds = question.answers.map((a) => a.id);
+      if (
+        !Object.keys(condition.answers).every((answer) =>
+          answersIds.includes(+answer)
+        )
+      ) {
+        throw new NotFoundException(
+          "The answers provided could not be found in the question provided"
+        );
       }
 
       // Create the conditions
-      await this.prisma.$transaction(async tx => {
+      await this.prisma.$transaction(async (tx) => {
         await tx.condition.createMany({
           data: Object.entries(condition.answers).map(([answer, section]) => {
             return {
               nextSectionId: section,
               answerId: +answer,
               questionId: condition.question
-            }
+            };
           })
         });
 
@@ -203,7 +242,7 @@ export class SectionsService {
 
       return {
         message: "Conditions added successfully"
-      }
+      };
     } catch (error) {
       this.handleQueryException(error);
     }

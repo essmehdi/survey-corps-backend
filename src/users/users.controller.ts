@@ -1,13 +1,12 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { RegisterUserDto } from './dto/RegisterUserDto';
-import { UsersService } from './users.service';
+import { Body, Controller, Get, Post } from "@nestjs/common";
+import { RegisterUserDto } from "./dto/RegisterUserDto";
+import { UsersService } from "./users.service";
 
-@Controller('users')
+@Controller("users")
 export class UsersController {
+  constructor(private users: UsersService) {}
 
-  constructor (private users: UsersService) {}
-  
-  @Post('register')
+  @Post("register")
   async register(@Body() registerUserDto: RegisterUserDto) {
     const { fullname, email, privilege } = registerUserDto;
     await this.users.createUser(fullname, email, privilege);
@@ -16,7 +15,7 @@ export class UsersController {
     };
   }
 
-  @Get('leaderboard')
+  @Get("leaderboard")
   async leaderboard() {
     return this.users.getLeaderboard();
   }
