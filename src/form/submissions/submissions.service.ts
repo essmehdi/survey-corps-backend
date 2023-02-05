@@ -46,16 +46,30 @@ export class SubmissionsService {
         throw new BadRequestException(`Bad question #${question.id} positioning`);
 
       // Validate the answer
-      const questionAnswer = await this.prisma.answer.findFirst({ where: { id: answer.answerId, questionId: question.id } })
-      if (!questionAnswer) 
-        throw new NotFoundException(`Answer #${answer.answerId} on question #${answer.questionId} does not exist`);
+      if (answer.answerId && !answer.other) {
 
-      if (question.conditions.length) {
-        if (nextSectionId)
-          throw new UnprocessableEntityException(`Form integrity error`);
-        const verifiedCondition = question.conditions.find(condition => condition.answerId === questionAnswer.id);
-        nextSectionId = verifiedCondition?.nextSectionId ?? question.conditions.find(condition => !condition.answerId).nextSectionId
+        const questionAnswer = await this.prisma.answer.findFirst({ where: { id: answer.answerId, questionId: question.id } })
+        if (!questionAnswer) 
+          throw new NotFoundException(`Answer #${answer.answerId} on question #${answer.questionId} does not exist`);
+
+        if (question.conditions.length) {
+          if (nextSectionId)
+            throw new UnprocessableEntityException(`Form integrity error`);
+          const verifiedCondition = question.conditions.find(condition => condition.answerId === questionAnswer.id);
+          nextSectionId = verifiedCondition?.nextSectionId ?? question.conditions.find(condition => !condition.answerId).nextSectionId
+        }
+        
+      } else if (!answer.answerId && answer.other) {
+        if (question.regex) {
+          const regex = new RegExp(question.regex);
+          if (!regex.test(answer.other))
+            throw new BadRequestException(`The answer "${answer.other}" for the question #${question.id} doesn't match the regular expression`);
+        }
+      } else {
+        throw new BadRequestException(`Please provide either a predefined answer or a user provided answer but not both`);
       }
+
+      
 
       if (question.nextQuestion) {
         nextQuestionId = question.nextQuestion.id;
