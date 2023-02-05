@@ -95,95 +95,65 @@ export class SubmissionsService {
             `Bad question #${question.id} positioning`
           );
 
-        if (question.type !== QuestionType.FREEFIELD) {
-          const answers = (
-            await this.prisma.answer.findMany({
-              where: { question: { id: question.id } },
-              select: { id: true }
-            })
-          ).map((it) => it.id);
-          if (question.type === QuestionType.SINGLE_CHOICE) {
-            if (
-              (answer.answerId && answer.other) ||
-              (!answer.answerId && !answer.other)
-            )
-              throw new ConflictException(
-                `One of 'answerId' and 'other' is required and not both`
-              );
-            if (answer.answerId) {
-              if (typeof answer.answerId !== "number")
-                throw new BadRequestException(
-                  `'answerId' must be a number in question #${question.id}`
+        if (!answer.answerId && !answer.other) {
+          if (question.required)
+            throw new BadRequestException(
+              `Question #${question.id} is required`
+            );
+        } else {
+          if (question.type !== QuestionType.FREEFIELD) {
+            const answers = (
+              await this.prisma.answer.findMany({
+                where: { question: { id: question.id } },
+                select: { id: true }
+              })
+            ).map((it) => it.id);
+            if (question.type === QuestionType.SINGLE_CHOICE) {
+              if (
+                (answer.answerId && answer.other) ||
+                (!answer.answerId && !answer.other)
+              )
+                throw new ConflictException(
+                  `One of 'answerId' and 'other' is required and not both`
                 );
-              Logger.debug(answers);
-              if (!answers.includes(answer.answerId)) {
-                throw new NotFoundException(
-                  `Answer #${answer.answerId} on question #${answer.questionId} does not exist`
-                );
+              if (answer.answerId) {
+                if (typeof answer.answerId !== "number")
+                  throw new BadRequestException(
+                    `'answerId' must be a number in question #${question.id}`
+                  );
+                if (!answers.includes(answer.answerId)) {
+                  throw new NotFoundException(
+                    `Answer #${answer.answerId} on question #${answer.questionId} does not exist`
+                  );
+                }
+              } else {
+                if (question.regex) {
+                  if (!new RegExp(question.regex).test(answer.other))
+                    throw new BadRequestException(
+                      `Answer for question #${question.id} does not match the regular expression`
+                    );
+                }
               }
             } else {
-              if (question.regex) {
-                if (!new RegExp(question.regex).test(answer.other))
-                  throw new BadRequestException(
-                    `Answer for question #${question.id} does not match the regular expression`
-                  );
+              if (!Array.isArray(answer.answerId))
+                throw new BadRequestException(
+                  `Question #${question.id} is a multiple choice question. Answer must be an array`
+                );
+              if (
+                answer.answerId.length === 0 ||
+                !answer.answerId.every((it) => answers.includes(it))
+              )
+                throw new NotFoundException(
+                  `An answer provided on question #${answer.questionId} does not exist`
+                );
+              if (answer.other) {
+                this.validateOtherAnswer(question, answer.other);
               }
             }
           } else {
-            if (!Array.isArray(answer.answerId))
-              throw new BadRequestException(
-                `Question #${question.id} is a multiple choice question. Answer must be an array`
-              );
-            if (
-              answer.answerId.length === 0 ||
-              !answer.answerId.every((it) => answers.includes(it))
-            )
-              throw new NotFoundException(
-                `An answer provided on question #${answer.questionId} does not exist`
-              );
-            if (answer.other) {
-              this.validateOtherAnswer(question, answer.other);
-            }
+            this.validateOtherAnswer(question, answer.other);
           }
-        } else {
-          this.validateOtherAnswer(question, answer.other);
         }
-
-        // Validate the answer
-        // if (answer.answerId && !answer.other) {
-        //   const questionAnswer = await this.prisma.answer.findFirst({
-        //     where: { id: answer.answerId, questionId: question.id }
-        //   });
-        //   if (!questionAnswer)
-        //     throw new NotFoundException(
-        //       `Answer #${answer.answerId} on question #${answer.questionId} does not exist`
-        //     );
-
-        //   if (question.conditions.length) {
-        //     if (nextSectionId)
-        //       throw new UnprocessableEntityException(`Form integrity error`);
-        //     const verifiedCondition = question.conditions.find(
-        //       (condition) => condition.answerId === questionAnswer.id
-        //     );
-        //     nextSectionId =
-        //       verifiedCondition?.nextSectionId ??
-        //       question.conditions.find((condition) => !condition.answerId)
-        //         .nextSectionId;
-        //   }
-        // } else if (!answer.answerId && answer.other) {
-        //   // FREEFIELD question
-        //   if (question.regex) {
-        //     const regex = new RegExp(question.regex);
-        //     if (!regex.test(answer.other))
-        //       throw new BadRequestException(
-        //         `The answer "${answer.other}" for the question #${question.id} doesn't match the regular expression`
-        //       );
-        //   }
-        // } else {
-        //   throw new BadRequestException(
-        //     `Please provide either a predefined answer or a user provided answer but not both`
-        //   );
-        // }
 
         if (question.nextQuestion) {
           nextQuestionId = question.nextQuestion.id;
