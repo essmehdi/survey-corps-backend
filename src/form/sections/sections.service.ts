@@ -7,11 +7,11 @@ import {
   Logger,
   NotFoundException
 } from "@nestjs/common";
-import { NotFoundError } from "rxjs";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConditionDto } from "./dto/ChangeNextSectionDto";
 import { QuestionsService } from "../questions/questions.service";
 import { QuestionSection } from "@prisma/client";
+import { NotFoundError } from "@prisma/client/runtime";
 
 @Injectable()
 export class SectionsService {
