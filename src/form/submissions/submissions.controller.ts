@@ -8,6 +8,6 @@ export class SubmissionsController {
 
   @Post("submit")
   async submit(@Body() addSubmissionDto: AddSubmissionDto) {
-    return await this.submissions.addSubmission(addSubmissionDto.submissions);
+    return await this.submissions.addSubmission(addSubmissionDto);
   }
 }
