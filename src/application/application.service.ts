@@ -9,6 +9,7 @@ import {
 import { ApplicationStatus, Prisma } from "@prisma/client";
 import { NotFoundError } from "@prisma/client/runtime";
 import { randomUUID } from "crypto";
+import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { TokensService } from "src/tokens/tokens.service";
 
@@ -33,18 +34,19 @@ export class ApplicationService {
 
   private handleQueryException(error: any) {
     this.logger.error(error);
-    if (error instanceof NotFoundError) {
-      throw new NotFoundException("Application not found");
-    } else if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002" &&
-      !Array.isArray(error.meta?.target) &&
-      error.meta?.target === "Application_email_key"
-    ) {
-      throw new ConflictException("This email has already applied");
-    } else {
-      throw new InternalServerErrorException("An error has occured");
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (
+        error.code === PrismaError.UniqueConstraintViolation &&
+        error.meta?.target[0] === "Application_email_key"
+      ) {
+        throw new ConflictException("This email has already applied");
+      } else if (error.code === PrismaError.RecordsNotFound) {
+        throw new NotFoundException("The requested application was not found");
+      } else if (error.code === PrismaError.RecordDoesNotExist) {
+        throw new NotFoundException("The requested application does not exist");
+      }
     }
+    throw new InternalServerErrorException("An error has occured");
   }
 
   /**
