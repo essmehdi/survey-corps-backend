@@ -1,34 +1,46 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards
+} from "@nestjs/common";
 import { ApplicationStatus } from "@prisma/client";
+import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApplicationService } from "./application.service";
 import { ApplicationDto } from "./dto/ApplicationDto";
+import { GetApplicationsDto, StatusOptions } from "./dto/GetApplicationsDto";
 
-@Controller("admin/applications")
+@Controller()
 export class ApplicationController {
   constructor(private applications: ApplicationService) {}
 
-  @Post()
+  @Post("applications")
   async apply(@Body() applicationDto: ApplicationDto) {
     const { fullname, email } = applicationDto;
     return await this.applications.addApplication(fullname, email);
   }
 
-  @Get()
-  async getAllApplications() {
-    return await this.applications.getAllApplications();
+  @Get("admin/applications")
+  @UseGuards(AdminGuard)
+  async getAllApplications(@Query() getApplicationsDto: GetApplicationsDto) {
+    const { status } = getApplicationsDto;
+    if (status === StatusOptions.PENDING)
+      return await this.applications.getAllPendingApplications();
+    return await this.applications.getAllRespondedApplications();
   }
 
-  @Get("pending")
-  async getAllPendingApplications() {
-    return await this.applications.getAllPendingApplications();
-  }
-
-  @Get(":application")
+  @Get("admin/applications/:application")
+  @UseGuards(AdminGuard)
   async getApplication(@Param("application") applicationId: number) {
     return await this.applications.getApplication(applicationId);
   }
 
-  @Post(":application/accept")
+  @Post("admin/applications/:application/accept")
+  @UseGuards(AdminGuard)
   async acceptApplication(@Param("application") applicationId: number) {
     await this.applications.respondToApplication(
       applicationId,
@@ -39,7 +51,8 @@ export class ApplicationController {
     };
   }
 
-  @Post(":application/reject")
+  @Post("admin/applications/:application/reject")
+  @UseGuards(AdminGuard)
   async rejectApplication(@Param("application") applicationId: number) {
     await this.applications.respondToApplication(
       applicationId,
