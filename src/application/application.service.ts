@@ -37,7 +37,7 @@ export class ApplicationService {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (
         error.code === PrismaError.UniqueConstraintViolation &&
-        error.meta?.target[0] === "Application_email_key"
+        error.meta?.target[0] === "email"
       ) {
         throw new ConflictException("This email has already applied");
       } else if (error.code === PrismaError.RecordsNotFound) {

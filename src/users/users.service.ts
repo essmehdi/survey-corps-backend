@@ -56,18 +56,15 @@ export class UsersService {
     this.logger.error(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002" &&
-        !Array.isArray(error.meta?.target) &&
-        error.meta?.target === "User_email_key"
+        error.code === PrismaError.UniqueConstraintViolation &&
+        error.meta?.target[0] === "email"
       ) {
         throw new ConflictException("This email already exists");
       } else if (error.code === PrismaError.RecordsNotFound) {
         throw new NotFoundException("User not found");
       }
-    } else {
-      throw new InternalServerErrorException("An error has occured");
     }
+    throw new InternalServerErrorException("An error has occured");
   }
 
   async user(
