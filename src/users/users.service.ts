@@ -11,6 +11,7 @@ import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
 import { NotFoundError } from "@prisma/client/runtime";
+import { PrismaError } from "prisma-error-enum";
 
 const charsPool =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_-=+";
@@ -53,15 +54,17 @@ export class UsersService {
 
   private handleQueryException(error: any) {
     this.logger.error(error);
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002" &&
-      !Array.isArray(error.meta?.target) &&
-      error.meta?.target === "User_email_key"
-    ) {
-      throw new ConflictException("This email already exists");
-    } else if (error instanceof NotFoundError) {
-      throw new NotFoundException("User not found");
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002" &&
+        !Array.isArray(error.meta?.target) &&
+        error.meta?.target === "User_email_key"
+      ) {
+        throw new ConflictException("This email already exists");
+      } else if (error.code === PrismaError.RecordsNotFound) {
+        throw new NotFoundException("User not found");
+      }
     } else {
       throw new InternalServerErrorException("An error has occured");
     }

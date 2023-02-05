@@ -10,8 +10,9 @@ import {
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConditionDto } from "./dto/ChangeNextSectionDto";
 import { QuestionsService } from "../questions/questions.service";
-import { QuestionSection } from "@prisma/client";
+import { Prisma, QuestionSection } from "@prisma/client";
 import { NotFoundError } from "@prisma/client/runtime";
+import { PrismaError } from "prisma-error-enum";
 
 @Injectable()
 export class SectionsService {
@@ -22,16 +23,15 @@ export class SectionsService {
     private questions: QuestionsService
   ) {}
 
-  private handleQueryException(error: any, entity: string = "Section") {
+  private handleQueryException(error: any, entity: string = "section") {
     this.logger.error(error);
-    if (error instanceof NotFoundError) {
-      throw new NotFoundException();
-    } else {
-      throw new HttpException(
-        "An error has occured",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === PrismaError.RecordDoesNotExist)
+        throw new NotFoundException(`The requested ${entity} does not exist`);
+      else if (error.code === PrismaError.RecordsNotFound)
+        throw new NotFoundException(`The requested ${entity} was not found`);
     }
+    throw new InternalServerErrorException("An error has occured");
   }
 
   /**

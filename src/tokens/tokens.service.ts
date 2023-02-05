@@ -4,8 +4,10 @@ import {
   Logger,
   NotFoundException
 } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { NotFoundError } from "@prisma/client/runtime";
 import { randomUUID } from "crypto";
+import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
 
 @Injectable()
@@ -16,11 +18,13 @@ export class TokensService {
 
   private handleQueryException(error: any) {
     this.logger.error(error);
-    if (error instanceof NotFoundError) {
-      throw new NotFoundException("Token not found");
-    } else {
-      throw new InternalServerErrorException("An error has occured");
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === PrismaError.RecordDoesNotExist)
+        throw new NotFoundException("Token does not exist");
+      else if (error.code === PrismaError.RecordsNotFound)
+        throw new NotFoundException("Token not found");
     }
+    throw new InternalServerErrorException("An error has occured");
   }
 
   /**
