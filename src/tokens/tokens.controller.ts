@@ -9,8 +9,8 @@ import {
   UnauthorizedException,
   UseGuards
 } from "@nestjs/common";
-import { AdminGuard } from "src/auth/admin.guard";
-import { CookieAuthenticationGuard } from "src/auth/cookieAuthentication.guard";
+import { AdminGuard } from "src/auth/guards/admin.guard";
+import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
 import { RequestWithUser } from "src/auth/requestWithUser.interface";
 import { TokensService } from "./tokens.service";
 

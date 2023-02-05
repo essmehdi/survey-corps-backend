@@ -6,8 +6,8 @@ import {
   Response,
   UseGuards
 } from "@nestjs/common";
-import { CookieAuthenticationGuard } from "./cookieAuthentication.guard";
-import { LogInWithCredentialsGuard } from "./logInWithCredentials.guard";
+import { CookieAuthenticationGuard } from "./guards/cookieAuthentication.guard";
+import { LogInWithCredentialsGuard } from "./guards/logInWithCredentials.guard";
 import { RequestWithUser } from "./requestWithUser.interface";
 import { Response as ExpressResponse } from "express";
 
