@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional } from "class-validator";
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class Submission {
   @IsNumber()
@@ -11,7 +11,7 @@ export class Submission {
   @IsOptional()
   answerId?: number;
 
-  @IsNumber()
+  @IsString()
   @IsOptional()
   other?: string;
 }
