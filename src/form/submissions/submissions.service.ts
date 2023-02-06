@@ -99,6 +99,11 @@ export class SubmissionsService {
     });
   }
 
+  /**
+   * A helper function to validate the 'other' against a regex if defined in the question
+   * @param question The question to validate for
+   * @param otherAnswer The 'other' answer to validate
+   */
   private validateOtherAnswer(
     question: Partial<Question>,
     otherAnswer: string
@@ -111,7 +116,15 @@ export class SubmissionsService {
     }
   }
 
-  private async validateSubmission(answers: Submission[], token: string) {
+  /**
+   * Validates the user submission and save them to database
+   * @param answers Answers provided by the client
+   * @param token The submission token
+   */
+  private async validateAndSaveSubmission(
+    answers: Submission[],
+    token: string
+  ) {
     await this.prisma.$transaction(async (tx) => {
       var currentSection: QuestionSection = null;
       var nextSectionId = null;
@@ -247,8 +260,6 @@ export class SubmissionsService {
         }
       }
     });
-
-    return true;
   }
 
   async addSubmission(addSubmissionDto: AddSubmissionDto) {
@@ -270,11 +281,15 @@ export class SubmissionsService {
     if (tokens.submissions.length > 0) {
       throw new ConflictException("The submission token has already been used");
     }
+
+    // Validate and save submission
+    await this.validateAndSaveSubmission(
+      addSubmissionDto.submissions,
+      addSubmissionDto.token
+    );
+
     return {
-      valid: await this.validateSubmission(
-        addSubmissionDto.submissions,
-        addSubmissionDto.token
-      )
+      message: "Submission saved successfully"
     };
   }
 }
