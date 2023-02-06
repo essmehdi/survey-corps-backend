@@ -79,8 +79,8 @@ model Submission {
   id          Int      @id @default(autoincrement())
   question    Question @relation(fields: [questionId], references: [id])
   questionId  Int
-  answer      Answer   @relation(fields: [answerId], references: [id])
-  answerId    Int
+  answer      Answer?  @relation(fields: [answerId], references: [id])
+  answerId    Int?
   token       Token    @relation(fields: [tokenId], references: [id])
   tokenId     Int
   other       String?
