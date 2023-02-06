@@ -22,6 +22,83 @@ import { Submission } from "./dto/Submission";
 export class SubmissionsService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Submission helper function to add a single answer
+   * @param tx The transaction client
+   * @param token The submission token
+   * @param answer The answer object
+   */
+  private async addSingleAnswerSubmission(
+    tx: Prisma.TransactionClient,
+    token: string,
+    answer: Submission
+  ) {
+    const { questionId, answerId } = answer;
+    await tx.token.update({
+      where: { token },
+      data: {
+        submissions: {
+          create: {
+            question: { connect: { id: questionId } },
+            answer: { connect: { id: answerId as number } }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Submission helper function to add multiple answers for a question
+   * @param tx The transaction client
+   * @param token The submission token
+   * @param answer The answer object
+   */
+  private async addMultipleAnswersSubmission(
+    tx: Prisma.TransactionClient,
+    token: string,
+    answer: Submission
+  ) {
+    const { questionId, answerId } = answer;
+    await tx.token.update({
+      where: { token },
+      data: {
+        submissions: {
+          createMany: {
+            data: (answerId as number[]).map((it) => ({
+              questionId,
+              answerId: it
+            }))
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Submission helper function to add an other answer
+   * @param tx The transaction client
+   * @param token The submission token
+   * @param answer The answer object
+   */
+  private async addOtherAnswerSubmission(
+    tx: Prisma.TransactionClient,
+    token: string,
+    answer: Submission
+  ) {
+    const { questionId, other } = answer;
+    await tx.token.update({
+      where: { token },
+      data: {
+        submissions: {
+          create: {
+            question: { connect: { id: questionId } },
+            other
+          }
+        }
+      }
+    });
+  }
+
   private validateOtherAnswer(
     question: Partial<Question>,
     otherAnswer: string
@@ -95,12 +172,14 @@ export class SubmissionsService {
             `Bad question #${question.id} positioning`
           );
 
+        // Check if question is required
         if (!answer.answerId && !answer.other) {
           if (question.required)
             throw new BadRequestException(
               `Question #${question.id} is required`
             );
         } else {
+          // Validate answers
           if (question.type !== QuestionType.FREEFIELD) {
             const answers = (
               await this.prisma.answer.findMany({
@@ -109,6 +188,7 @@ export class SubmissionsService {
               })
             ).map((it) => it.id);
             if (question.type === QuestionType.SINGLE_CHOICE) {
+              // Check if an answer or other field is provided
               if (
                 (answer.answerId && answer.other) ||
                 (!answer.answerId && !answer.other)
@@ -126,6 +206,7 @@ export class SubmissionsService {
                     `Answer #${answer.answerId} on question #${answer.questionId} does not exist`
                   );
                 }
+                await this.addSingleAnswerSubmission(tx, token, answer);
               } else {
                 if (question.regex) {
                   if (!new RegExp(question.regex).test(answer.other))
@@ -133,6 +214,7 @@ export class SubmissionsService {
                       `Answer for question #${question.id} does not match the regular expression`
                     );
                 }
+                await this.addOtherAnswerSubmission(tx, token, answer);
               }
             } else {
               if (!Array.isArray(answer.answerId))
@@ -146,12 +228,15 @@ export class SubmissionsService {
                 throw new NotFoundException(
                   `An answer provided on question #${answer.questionId} does not exist`
                 );
+              await this.addMultipleAnswersSubmission(tx, token, answer);
               if (answer.other) {
                 this.validateOtherAnswer(question, answer.other);
+                await this.addOtherAnswerSubmission(tx, token, answer);
               }
             }
           } else {
             this.validateOtherAnswer(question, answer.other);
+            await this.addOtherAnswerSubmission(tx, token, answer);
           }
         }
 
