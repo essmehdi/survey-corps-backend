@@ -14,6 +14,7 @@ import {
   QuestionSection,
   QuestionType
 } from "@prisma/client";
+import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AddSubmissionDto } from "./dto/AddSubmissionDto";
 import { Submission } from "./dto/Submission";
@@ -272,7 +273,7 @@ export class SubmissionsService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2025"
+        error.code === PrismaError.RecordsNotFound
       ) {
         throw new ForbiddenException("Missing or invalid token");
       }
