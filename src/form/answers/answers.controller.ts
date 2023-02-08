@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { AddAnswerDto } from "./dto/AddAnswerDto";
 import { QuestionsService } from "../questions/questions.service";
 import { AnswersService } from "./answers.service";
+import { AdminGuard } from "src/auth/guards/admin.guard";
 
 @Controller("admin/sections/:section/questions/:question/answers")
+@UseGuards(AdminGuard)
 export class AnswersController {
   constructor(
     private answers: AnswersService,

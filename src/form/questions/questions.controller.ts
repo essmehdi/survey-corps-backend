@@ -1,9 +1,19 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards
+} from "@nestjs/common";
+import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddQuestionDto } from "./dto/AddQuestionDto";
 import { EditQuestionDto } from "./dto/EditQuestionDto";
 import { QuestionsService } from "./questions.service";
 
 @Controller("admin/sections/:section/questions")
+@UseGuards(AdminGuard)
 export class QuestionsController {
   constructor(private questions: QuestionsService) {}
 

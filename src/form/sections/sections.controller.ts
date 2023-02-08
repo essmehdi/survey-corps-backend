@@ -5,8 +5,10 @@ import {
   Get,
   Param,
   Patch,
-  Post
+  Post,
+  UseGuards
 } from "@nestjs/common";
+import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddSectionDto } from "./dto/AddSectionDto";
 import {
   ChangeNextSectionDto,
@@ -15,6 +17,7 @@ import {
 import { SectionsService } from "./sections.service";
 
 @Controller("admin/sections")
+@UseGuards(AdminGuard)
 export class SectionsController {
   constructor(private sections: SectionsService) {}
 
