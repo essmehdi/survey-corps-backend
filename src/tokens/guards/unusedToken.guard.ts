@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
+import { isUUID } from "class-validator";
 import { TokensService } from "../tokens.service";
 
 /**
@@ -10,7 +11,11 @@ export class UnusedTokenGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = request.token;
-    return await this.tokens.isTokenValidForSubmission(token);
+    const token = request.params.token;
+    return (
+      !!token &&
+      isUUID(token) &&
+      (await this.tokens.isTokenValidForSubmission(token))
+    );
   }
 }
