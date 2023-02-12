@@ -100,9 +100,10 @@ export class SectionsService {
    */
   async firstSection() {
     try {
-      return await this.prisma.questionSection.findFirstOrThrow({
-        where: { previousSection: null }
+      const firstSection = await this.prisma.questionSection.findFirstOrThrow({
+        where: { previousSection: null, conditioned: { none: {} } }
       });
+      return this.section(firstSection.id);
     } catch (error) {
       return new InternalServerErrorException(
         "Could not determine first section"
