@@ -122,8 +122,10 @@ export class SectionsService {
       });
 
       const next = this.getSectionNext(result);
+      const { nextSectionId, ...strippedResult } = result;
+
       return {
-        ...result,
+        ...strippedResult,
         questions: await this.questions.getQuestionsBySectionInOrder(sectionId),
         next
       };
