@@ -3,7 +3,8 @@ import { AnswersService } from "../answers/answers.service";
 import { QuestionsService } from "../questions/questions.service";
 import { SectionsService } from "../sections/sections.service";
 
-@Controller("session")
+@Controller("session/:token")
+@UseGuards(UnusedTokenGuard)
 export class SessionController {
   constructor(
     private sections: SectionsService,

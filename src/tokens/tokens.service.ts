@@ -92,4 +92,16 @@ export class TokensService {
   async getUserTokens(userId: number) {
     return await this.prisma.token.findMany({ where: { userId } });
   }
+
+  /**
+   * Verifies if a token exists and valid for submission (not used before)
+   * @param token Token to validate
+   */
+  async isTokenValidForSubmission(token: string) {
+    const validToken = await this.prisma.token.findFirst({
+      where: { token, submissions: { none: {} } }
+    });
+
+    return !!validToken;
+  }
 }
