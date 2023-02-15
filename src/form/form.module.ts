@@ -8,7 +8,7 @@ import { AnswersController } from "./answers/answers.controller";
 import { SubmissionsController } from "./submissions/submissions.controller";
 import { SubmissionsService } from "./submissions/submissions.service";
 import { SessionController } from "./session/session.controller";
-import { UnusedTokenGuard } from "src/tokens/guards/unusedToken.guard";
+import { TokensModule } from "src/tokens/tokens.module";
 
 @Module({
   providers: [
@@ -24,6 +24,6 @@ import { UnusedTokenGuard } from "src/tokens/guards/unusedToken.guard";
     SubmissionsController,
     SessionController
   ],
-  imports: [UnusedTokenGuard]
+  imports: [TokensModule]
 })
 export class FormModule {}
