@@ -12,6 +12,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 
 @Injectable()
 export class TokensService {
+  private readonly NO_USER_PROJECTION = { id: true, token: true };
   private readonly logger = new Logger(TokensService.name);
 
   constructor(private prisma: PrismaService) {}
@@ -90,7 +91,10 @@ export class TokensService {
    * @param userId ID of the user
    */
   async getUserTokens(userId: number) {
-    return await this.prisma.token.findMany({ where: { userId } });
+    return await this.prisma.token.findMany({
+      where: { userId },
+      select: this.NO_USER_PROJECTION
+    });
   }
 
   /**
