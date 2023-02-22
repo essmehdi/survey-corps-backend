@@ -5,6 +5,7 @@ import {
   Logger,
   Param,
   Post,
+  Query,
   Req,
   UnauthorizedException,
   UseGuards
@@ -12,6 +13,7 @@ import {
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
 import { RequestWithUser } from "src/auth/requestWithUser.interface";
+import { TokensQueryDto, TokenStateFilter } from "./dto/tokens-query.dto";
 import { TokensService } from "./tokens.service";
 
 @Controller("tokens")
@@ -32,14 +34,23 @@ export class TokensController {
 
   @Get()
   @UseGuards(CookieAuthenticationGuard)
-  async getTokens(@Req() request: RequestWithUser) {
-    return await this.tokens.getUserTokens(request.user.id);
+  async getTokens(
+    @Req() request: RequestWithUser,
+    @Query() tokensQueryDto: TokensQueryDto
+  ) {
+    const { page, limit, state } = tokensQueryDto;
+    return await this.tokens.getUserTokens(
+      request.user.id,
+      page ?? 1,
+      limit ?? 30,
+      state ?? TokenStateFilter.ALL
+    );
   }
 
   @Get("all")
   @UseGuards(AdminGuard)
-  async getAllTokens() {
-    return await this.tokens.allTokens();
+  async getAllTokens(@Query() page: number, @Query() limit: number) {
+    return await this.tokens.allTokens(page, limit);
   }
 
   @Delete(":token")
@@ -48,14 +59,9 @@ export class TokensController {
     @Req() request: RequestWithUser,
     @Param("token") tokenId: number
   ) {
-    const token = await this.tokens.getToken(tokenId);
-    if (token.userId === request.user.id) {
-      await this.tokens.removeToken(tokenId);
-      return {
-        message: "Token deleted successfully"
-      };
-    } else {
-      throw new UnauthorizedException("You cannot remove this token");
-    }
+    await this.tokens.removeToken(request.user, tokenId);
+    return {
+      message: "Token revoked successfully"
+    };
   }
 }
