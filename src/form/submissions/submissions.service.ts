@@ -14,6 +14,7 @@ import {
   QuestionSection,
   QuestionType
 } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AddSubmissionDto } from "./dto/AddSubmissionDto";
@@ -31,19 +32,15 @@ export class SubmissionsService {
    */
   private async addSingleAnswerSubmission(
     tx: Prisma.TransactionClient,
-    token: string,
+    submissionId: string,
     answer: Submission
   ) {
     const { questionId, answerId } = answer;
-    await tx.token.update({
-      where: { token },
+    await tx.submission.create({
       data: {
-        submissions: {
-          create: {
-            question: { connect: { id: questionId } },
-            answer: { connect: { id: answerId as number } }
-          }
-        }
+        question: { connect: { id: questionId } },
+        answer: { connect: { id: answerId as number } },
+        submissionId
       }
     });
   }
@@ -56,22 +53,16 @@ export class SubmissionsService {
    */
   private async addMultipleAnswersSubmission(
     tx: Prisma.TransactionClient,
-    token: string,
+    submissionId: string,
     answer: Submission
   ) {
     const { questionId, answerId } = answer;
-    await tx.token.update({
-      where: { token },
-      data: {
-        submissions: {
-          createMany: {
-            data: (answerId as number[]).map((it) => ({
-              questionId,
-              answerId: it
-            }))
-          }
-        }
-      }
+    await tx.submission.createMany({
+      data: (answerId as number[]).map((it) => ({
+        questionId,
+        answerId: it,
+        submissionId
+      }))
     });
   }
 
@@ -83,19 +74,15 @@ export class SubmissionsService {
    */
   private async addOtherAnswerSubmission(
     tx: Prisma.TransactionClient,
-    token: string,
+    submissionId: string,
     answer: Submission
   ) {
     const { questionId, other } = answer;
-    await tx.token.update({
-      where: { token },
+    await tx.submission.create({
       data: {
-        submissions: {
-          create: {
-            question: { connect: { id: questionId } },
-            other
-          }
-        }
+        question: { connect: { id: questionId } },
+        other,
+        submissionId
       }
     });
   }
@@ -120,12 +107,13 @@ export class SubmissionsService {
   /**
    * Validates the user submission and save them to database
    * @param answers Answers provided by the client
-   * @param token The submission token
+   * @param submissionId The submission token
    */
   private async validateAndSaveSubmission(
     answers: Submission[],
     token: string
   ) {
+    const submissionId = randomUUID();
     await this.prisma.$transaction(async (tx) => {
       var currentSection: QuestionSection = null;
       var nextSectionId = null;
@@ -220,7 +208,7 @@ export class SubmissionsService {
                     `Answer #${answer.answerId} on question #${answer.questionId} does not exist`
                   );
                 }
-                await this.addSingleAnswerSubmission(tx, token, answer);
+                await this.addSingleAnswerSubmission(tx, submissionId, answer);
               } else {
                 if (question.regex) {
                   if (!new RegExp(question.regex).test(answer.other))
@@ -228,7 +216,7 @@ export class SubmissionsService {
                       `Answer for question #${question.id} does not match the regular expression`
                     );
                 }
-                await this.addOtherAnswerSubmission(tx, token, answer);
+                await this.addOtherAnswerSubmission(tx, submissionId, answer);
               }
             } else {
               if (!Array.isArray(answer.answerId))
@@ -242,15 +230,15 @@ export class SubmissionsService {
                 throw new NotFoundException(
                   `An answer provided on question #${answer.questionId} does not exist`
                 );
-              await this.addMultipleAnswersSubmission(tx, token, answer);
+              await this.addMultipleAnswersSubmission(tx, submissionId, answer);
               if (answer.other) {
                 this.validateOtherAnswer(question, answer.other);
-                await this.addOtherAnswerSubmission(tx, token, answer);
+                await this.addOtherAnswerSubmission(tx, submissionId, answer);
               }
             }
           } else {
             this.validateOtherAnswer(question, answer.other);
-            await this.addOtherAnswerSubmission(tx, token, answer);
+            await this.addOtherAnswerSubmission(tx, submissionId, answer);
           }
         }
 
@@ -260,15 +248,22 @@ export class SubmissionsService {
           nextQuestionId = null;
         }
       }
+
+      // Mark token as submitted
+      await tx.token.update({
+        where: { token },
+        data: {
+          submitted: true
+        }
+      });
     });
   }
 
   async addSubmission(addSubmissionDto: AddSubmissionDto) {
     try {
       // Check if token exists
-      var tokens = await this.prisma.token.findUniqueOrThrow({
-        where: { token: addSubmissionDto.token },
-        include: { submissions: true }
+      var token = await this.prisma.token.findUniqueOrThrow({
+        where: { token: addSubmissionDto.token }
       });
     } catch (error) {
       if (
@@ -279,7 +274,7 @@ export class SubmissionsService {
       }
     }
     // Check if the token has already been used to submit
-    if (tokens.submissions.length > 0) {
+    if (token.submitted) {
       throw new ConflictException("The submission token has already been used");
     }
 

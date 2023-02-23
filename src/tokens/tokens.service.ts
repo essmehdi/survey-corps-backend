@@ -22,11 +22,11 @@ import { TokenStateFilter } from "./dto/tokens-query.dto";
 
 @Injectable()
 export class TokensService {
-  private readonly NO_USER_PROJECTION = {
+  private readonly NO_USER_PROJECTION: Prisma.TokenSelect = {
     id: true,
     token: true,
     createdAt: true,
-    submissions: true
+    submitted: true
   };
   private readonly logger = new Logger(TokensService.name);
 
@@ -99,33 +99,14 @@ export class TokensService {
    */
   async removeToken(user: User, tokenId: number) {
     try {
-      const token = await this.prisma.token.findUniqueOrThrow({
-        where: { id: tokenId },
-        include: { submissions: true }
+      const whereCondition =
+        user.privilege === Privilege.ADMIN
+          ? { id: tokenId }
+          : { id: tokenId, user: { id: user.id } };
+
+      await this.prisma.token.delete({
+        where: whereCondition
       });
-      // If it is a member, he can only remove his own tokens
-      if (user.privilege === Privilege.MEMBER && token.userId !== user.id) {
-        throw new UnauthorizedException(
-          "You are not allowed to remove this token"
-        );
-      }
-      if (token.submissions.length === 0) {
-        // Delete the token directly if it has no submission
-        await this.prisma.token.delete({ where: { id: tokenId } });
-      } else {
-        // Delete all related submissions if it has submissions (only admins are allowed)
-        if (user.privilege !== Privilege.ADMIN) {
-          throw new UnauthorizedException(
-            "You cannot remove the token because it has been submitted"
-          );
-        }
-        await this.prisma.$transaction([
-          this.prisma.submission.deleteMany({
-            where: { token: { id: tokenId } }
-          }),
-          this.prisma.token.delete({ where: { id: tokenId } })
-        ]);
-      }
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -137,14 +118,12 @@ export class TokensService {
    */
   async allTokens(page: number = 1, limit: number = 30) {
     const [tokens, count] = await this.getTokensAndCount({
-      include: { submissions: { select: { id: true } } },
       take: limit,
       skip: limit * (page - 1),
       orderBy: { id: "asc" }
     });
 
-    const tokensWithSubmission = this.getTokensWithSubmission(tokens);
-    return paginatedResponse(tokensWithSubmission, page, limit, count);
+    return paginatedResponse(tokens, page, limit, count);
   }
 
   /**
@@ -163,19 +142,18 @@ export class TokensService {
       stateFilter === TokenStateFilter.ALL
         ? {}
         : stateFilter === TokenStateFilter.PENDING
-        ? { submissions: { none: {} } }
-        : { submissions: { some: {} } };
+        ? { submitted: false }
+        : { submitted: true };
 
     const [tokens, count] = await this.getTokensAndCount({
       where: { userId, ...stateFilterArgs },
       select: this.NO_USER_PROJECTION,
       take: limit,
       skip: limit * (page - 1),
-      orderBy: [{ submissions: { _count: "asc" } }, { createdAt: "desc" }]
+      orderBy: [{ submitted: "asc" }, { createdAt: "desc" }]
     });
 
-    const tokensWithSubmission = this.getTokensWithSubmission(tokens);
-    return paginatedResponse(tokensWithSubmission, page, limit, count);
+    return paginatedResponse(tokens, page, limit, count);
   }
 
   /**
@@ -184,7 +162,7 @@ export class TokensService {
    */
   async isTokenValidForSubmission(token: string) {
     const validToken = await this.prisma.token.findFirst({
-      where: { token, submissions: { none: {} } }
+      where: { token, submitted: false }
     });
 
     return !!validToken;

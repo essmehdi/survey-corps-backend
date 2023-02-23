@@ -76,26 +76,25 @@ model Answer {
 }
 
 model Submission {
-  id          Int       @id @default(autoincrement())
-  question    Question  @relation(fields: [questionId], references: [id])
-  questionId  Int
-  answer      Answer?   @relation(fields: [answerId], references: [id])
-  answerId    Int?
-  token       Token     @relation(fields: [tokenId], references: [id])
-  tokenId     Int
-  other       String?
-  submittedAt DateTime  @default(now())
+  id            Int       @id @default(autoincrement())
+  question      Question  @relation(fields: [questionId], references: [id])
+  questionId    Int
+  answer        Answer?   @relation(fields: [answerId], references: [id])
+  answerId      Int?
+  submissionId  String    
+  other         String?
+  submittedAt   DateTime  @default(now())
 
-  @@unique([questionId, answerId, tokenId])
+  @@unique([questionId, answerId, submissionId])
 }
 
 model Token {
-  id            Int          @id @default(autoincrement())
-  token         String       @unique
-  user          User?        @relation(fields: [userId], references: [id])
+  id            Int           @id @default(autoincrement())
+  token         String        @unique
+  user          User?         @relation(fields: [userId], references: [id])
   userId        Int?
+  submitted     Boolean       @default(false)
   application   Application?
-  submissions   Submission[]
   createdAt     DateTime      @default(now())
 }
 
