@@ -1,5 +1,5 @@
-export const paginatedResponse = (
-  list: any[],
+export const paginatedResponse = <T>(
+  list: T[],
   page: number,
   limit: number,
   total: number
