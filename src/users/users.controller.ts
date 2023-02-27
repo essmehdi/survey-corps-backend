@@ -2,19 +2,31 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
+  Query,
   Request,
   UseGuards
 } from "@nestjs/common";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
 import { RequestWithUser } from "src/auth/requestWithUser.interface";
-import { RegisterUserDto } from "./dto/RegisterUserDto";
+import { RegisterUserDto } from "./dto/register-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { UsersQueryDto } from "./dto/users-query.dto";
 import { UsersService } from "./users.service";
 
 @Controller("users")
 export class UsersController {
   constructor(private users: UsersService) {}
+
+  @Get()
+  @UseGuards(AdminGuard)
+  async allUsers(@Query() usersQueryDto: UsersQueryDto) {
+    const { privilege, page, limit, search } = usersQueryDto;
+    return this.users.getAllUsers(privilege, page, limit, search);
+  }
 
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
@@ -30,6 +42,19 @@ export class UsersController {
     await this.users.createUser(fullname, email, privilege);
     return {
       message: "User successfully registered"
+    };
+  }
+
+  @Patch(":id")
+  @UseGuards(AdminGuard)
+  async updateUser(
+    @Param("id") id: number,
+    @Body() updateUserDto: UpdateUserDto
+  ) {
+    const { fullname, email, privilege } = updateUserDto;
+    await this.users.updateUser(id, fullname, email, privilege);
+    return {
+      message: "User updated successfully"
     };
   }
 

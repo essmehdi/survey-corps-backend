@@ -140,6 +140,22 @@ export class UsersService {
     }
   }
 
+  async updateUser(
+    id: number,
+    fullname: string,
+    email: string,
+    privilege?: Privilege
+  ) {
+    try {
+      await this.prisma.user.update({
+        where: { id },
+        data: { fullname, email, ...(privilege ? { privilege } : {}) }
+      });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
+
   async getLeaderboard() {
     return (
       await this.prisma.user.findMany({
