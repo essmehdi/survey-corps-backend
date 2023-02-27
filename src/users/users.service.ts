@@ -12,6 +12,9 @@ import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
 import { NotFoundError } from "@prisma/client/runtime";
 import { PrismaError } from "prisma-error-enum";
+import { PrivilegeFilter } from "./dto/users-query.dto";
+import { paginatedResponse } from "src/utils/response";
+import { convertToTsquery } from "src/utils/strings";
 
 const charsPool =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_-=+";
@@ -19,26 +22,35 @@ const charsPool =
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
-  private static PRIVATE_PROJECTION = {
-    id: false,
-    fullname: true,
-    email: true,
-    password: false,
-    privilege: true
-  };
   private static PUBLIC_PROJECTION = {
-    id: false,
-    fullname: true,
-    email: true,
-    password: false,
-    privilege: false
-  };
-  private static ALL_PROJECTION = {
     id: true,
     fullname: true,
     email: true,
-    password: true,
+    _count: {
+      select: {
+        tokens: {
+          where: {
+            submitted: true
+          }
+        }
+      }
+    }
+  };
+  private static PASSWORD_PROJECTION = {
+    password: true
+  };
+  private static PRIVILEGE_PROJECTION = {
     privilege: true
+  };
+  private static PRIVATE_PROJECTION = {
+    ...UsersService.PUBLIC_PROJECTION,
+    ...UsersService.PRIVILEGE_PROJECTION
+  };
+
+  private static ALL_PROJECTION = {
+    ...UsersService.PUBLIC_PROJECTION,
+    ...UsersService.PASSWORD_PROJECTION,
+    ...UsersService.PRIVILEGE_PROJECTION
   };
 
   constructor(private prisma: PrismaService, private config: ConfigService) {}
@@ -67,13 +79,45 @@ export class UsersService {
     throw new InternalServerErrorException("An error has occured");
   }
 
-  async user(
-    userWhereUniqueInput: Prisma.UserWhereUniqueInput,
-    allFields: boolean = false
-  ): Promise<User | null> {
+  private async getUsersAndCount(userFindManyArgs: Prisma.UserFindManyArgs) {
+    return await this.prisma.$transaction([
+      this.prisma.user.findMany(userFindManyArgs),
+      this.prisma.user.count({ where: userFindManyArgs.where })
+    ]);
+  }
+
+  async getAllUsers(
+    privilegeFilter: PrivilegeFilter,
+    page: number = 1,
+    limit: number = 30,
+    search?: string
+  ) {
+    try {
+      const whereQuery: Prisma.UserWhereInput =
+        privilegeFilter !== PrivilegeFilter.ALL
+          ? { privilege: privilegeFilter }
+          : {};
+
+      if (search) whereQuery.fullname = { search: convertToTsquery(search) };
+
+      const [users, count] = await this.getUsersAndCount({
+        where: whereQuery,
+        take: limit,
+        skip: limit * (page - 1),
+        orderBy: { id: "asc" },
+        select: UsersService.PRIVATE_PROJECTION
+      });
+
+      return paginatedResponse(users, page, limit, count);
+    } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
+
+  async getUserById(id: number, allFields: boolean = false) {
     try {
       return await this.prisma.user.findUniqueOrThrow({
-        where: userWhereUniqueInput,
+        where: { id },
         select: allFields
           ? UsersService.ALL_PROJECTION
           : UsersService.PRIVATE_PROJECTION
@@ -83,27 +127,17 @@ export class UsersService {
     }
   }
 
-  async users(
-    params: {
-      skip?: number;
-      take?: number;
-      cursor?: Prisma.UserWhereUniqueInput;
-      where?: Prisma.UserWhereInput;
-      orderBy?: Prisma.UserOrderByWithRelationInput;
-    },
-    allFields: boolean = false
-  ): Promise<User[]> {
-    const { skip, take, cursor, where, orderBy } = params;
-    return this.prisma.user.findMany({
-      skip,
-      take,
-      cursor,
-      where,
-      orderBy,
-      select: allFields
-        ? UsersService.ALL_PROJECTION
-        : UsersService.PRIVATE_PROJECTION
-    });
+  async getUserByEmail(email: string, allFields: boolean = false) {
+    try {
+      return await this.prisma.user.findUniqueOrThrow({
+        where: { email },
+        select: allFields
+          ? UsersService.ALL_PROJECTION
+          : UsersService.PRIVATE_PROJECTION
+      });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
   }
 
   async getLeaderboard() {
@@ -120,9 +154,7 @@ export class UsersService {
             select: {
               tokens: {
                 where: {
-                  submissions: {
-                    some: {}
-                  }
+                  submitted: true
                 }
               }
             }
