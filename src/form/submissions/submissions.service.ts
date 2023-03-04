@@ -17,8 +17,8 @@ import {
 import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
-import { AddSubmissionDto } from "./dto/AddSubmissionDto";
-import { Submission } from "./dto/Submission";
+import { AddSubmissionDto } from "./dto/add-submission.dto";
+import { SubmissionDto } from "./dto/submission.dto";
 
 @Injectable()
 export class SubmissionsService {
@@ -33,7 +33,7 @@ export class SubmissionsService {
   private async addSingleAnswerSubmission(
     tx: Prisma.TransactionClient,
     submissionId: string,
-    answer: Submission
+    answer: SubmissionDto
   ) {
     const { questionId, answerId } = answer;
     await tx.submission.create({
@@ -54,7 +54,7 @@ export class SubmissionsService {
   private async addMultipleAnswersSubmission(
     tx: Prisma.TransactionClient,
     submissionId: string,
-    answer: Submission
+    answer: SubmissionDto
   ) {
     const { questionId, answerId } = answer;
     await tx.submission.createMany({
@@ -75,7 +75,7 @@ export class SubmissionsService {
   private async addOtherAnswerSubmission(
     tx: Prisma.TransactionClient,
     submissionId: string,
-    answer: Submission
+    answer: SubmissionDto
   ) {
     const { questionId, other } = answer;
     await tx.submission.create({
@@ -110,7 +110,7 @@ export class SubmissionsService {
    * @param submissionId The submission token
    */
   private async validateAndSaveSubmission(
-    answers: Submission[],
+    answers: SubmissionDto[],
     token: string
   ) {
     const submissionId = randomUUID();

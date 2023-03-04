@@ -8,7 +8,7 @@ import {
   NotFoundException
 } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { ConditionDto } from "./dto/ChangeNextSectionDto";
+import { ConditionDto } from "./dto/change-next-section.dto";
 import { QuestionsService } from "../questions/questions.service";
 import { Prisma, QuestionSection } from "@prisma/client";
 import { NotFoundError } from "@prisma/client/runtime";

@@ -11,8 +11,8 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
-import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
-import { RequestWithUser } from "src/auth/requestWithUser.interface";
+import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
+import { RequestWithUser } from "src/auth/request-with-user.interface";
 import { RegisterUserDto } from "./dto/register-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersQueryDto } from "./dto/users-query.dto";
@@ -23,6 +23,9 @@ import { UsersService } from "./users.service";
 export class UsersController {
   constructor(private users: UsersService) {}
 
+  /**
+   * Gets all registered users
+   */
   @Get()
   @UseGuards(AdminGuard)
   async allUsers(@Query() usersQueryDto: UsersQueryDto) {
@@ -30,6 +33,9 @@ export class UsersController {
     return this.users.getAllUsers(privilege, page, limit, search);
   }
 
+  /**
+   * Gets info about the authenticated user
+   */
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
   async me(@Request() request: RequestWithUser) {
@@ -37,6 +43,9 @@ export class UsersController {
     return { fullname, email, privilege };
   }
 
+  /**
+   * Registers a new user
+   */
   @Post("register")
   @UseGuards(AdminGuard)
   async register(@Body() registerUserDto: RegisterUserDto) {
@@ -47,6 +56,9 @@ export class UsersController {
     };
   }
 
+  /**
+   * Updates user data
+   */
   @Patch(":id")
   @UseGuards(AdminGuard)
   async updateUser(
@@ -60,6 +72,9 @@ export class UsersController {
     };
   }
 
+  /**
+   * Gets users leaderboard
+   */
   @Get("leaderboard")
   async leaderboard() {
     return this.users.getLeaderboard();

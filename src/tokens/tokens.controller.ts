@@ -12,8 +12,8 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
-import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
-import { RequestWithUser } from "src/auth/requestWithUser.interface";
+import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
+import { RequestWithUser } from "src/auth/request-with-user.interface";
 import { TokensQueryDto, TokenStateFilter } from "./dto/tokens-query.dto";
 import { TokensService } from "./tokens.service";
 
@@ -24,6 +24,9 @@ export class TokensController {
 
   constructor(private tokens: TokensService) {}
 
+  /**
+   * Generates a token for the authenticated user
+   */
   @Post()
   @UseGuards(CookieAuthenticationGuard)
   async generate(@Req() request: RequestWithUser) {
@@ -34,6 +37,9 @@ export class TokensController {
     return token;
   }
 
+  /**
+   * Gets user generated tokens
+   */
   @Get()
   @UseGuards(CookieAuthenticationGuard)
   async getTokens(
@@ -49,12 +55,18 @@ export class TokensController {
     );
   }
 
+  /**
+   * Gets all generated tokens
+   */
   @Get("all")
   @UseGuards(AdminGuard)
   async getAllTokens(@Query() page: number, @Query() limit: number) {
     return await this.tokens.allTokens(page, limit);
   }
 
+  /**
+   * Revokes a token by deleting it
+   */
   @Delete(":token")
   @UseGuards(CookieAuthenticationGuard)
   async revoke(

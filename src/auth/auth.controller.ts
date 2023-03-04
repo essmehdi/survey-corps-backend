@@ -6,15 +6,18 @@ import {
   Response,
   UseGuards
 } from "@nestjs/common";
-import { CookieAuthenticationGuard } from "./guards/cookieAuthentication.guard";
-import { LogInWithCredentialsGuard } from "./guards/logInWithCredentials.guard";
-import { RequestWithUser } from "./requestWithUser.interface";
+import { CookieAuthenticationGuard } from "./guards/cookie-authentication.guard";
+import { LogInWithCredentialsGuard } from "./guards/login-with-credentials.guard";
+import { RequestWithUser } from "./request-with-user.interface";
 import { Response as ExpressResponse } from "express";
 import { ApiTags } from "@nestjs/swagger";
 
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
+  /**
+   * Log in a user
+   */
   @Post("login")
   @HttpCode(200)
   @UseGuards(LogInWithCredentialsGuard)
@@ -23,6 +26,9 @@ export class AuthController {
     return { fullname, email, privilege };
   }
 
+  /**
+   * Log out a user
+   */
   @Post("logout")
   @HttpCode(200)
   @UseGuards(CookieAuthenticationGuard)

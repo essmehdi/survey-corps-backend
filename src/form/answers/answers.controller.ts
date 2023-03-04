@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
-import { AddAnswerDto } from "./dto/AddAnswerDto";
+import { AddAnswerDto } from "./dto/add-answer.dto";
 import { QuestionsService } from "../questions/questions.service";
 import { AnswersService } from "./answers.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
@@ -14,6 +14,21 @@ export class AnswersController {
     private questions: QuestionsService
   ) {}
 
+  /**
+   * Gets an answer by ID
+   */
+  @Get(":answer")
+  async getAnswer(
+    @Param("sections") section: number,
+    @Param("question") question: number,
+    @Param("answer") answer: number
+  ) {
+    return await this.answers.getAnswers(section, question);
+  }
+
+  /**
+   * Adds an answer to a question
+   */
   @Post()
   async addAnswer(
     @Param("section") section: number,
@@ -29,14 +44,5 @@ export class AnswersController {
       id: answer.id,
       title: answer.title
     };
-  }
-
-  @Get(":answer")
-  async getAnswer(
-    @Param("sections") section: number,
-    @Param("question") question: number,
-    @Param("answer") answer: number
-  ) {
-    return await this.answers.getAnswers(section, question);
   }
 }

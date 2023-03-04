@@ -13,16 +13,25 @@ export class SessionController {
     private questions: QuestionsService
   ) {}
 
+  /**
+   * Gets the first section of the form
+   */
   @Get("sections/first")
   async getFirstSection() {
     return await this.sections.firstSection();
   }
 
+  /**
+   * Gets a section by ID
+   */
   @Get("sections/:section")
   async getSection(@Param("section") id: number) {
     return await this.sections.section(id);
   }
 
+  /**
+   * Gets questions of a section
+   */
   @Get("sections/:section/questions")
   async getSectionQuestions(@Param("section") section: number) {
     return await this.questions.getQuestionsBySectionInOrder(section);

@@ -8,23 +8,35 @@ export enum PrivilegeFilter {
 }
 
 export class UsersQueryDto {
+  /**
+   * Page number
+   */
   @IsNumber()
   @Type(() => Number)
   @Min(1)
   @IsOptional()
-  page: number;
+  page?: number;
 
+  /**
+   * Number of elements in a single page
+   */
   @IsNumber()
   @Type(() => Number)
   @Min(10)
   @IsOptional()
-  limit: number;
+  limit?: number;
 
+  /**
+   * Filter by user privilege
+   */
   @IsEnum(PrivilegeFilter)
   @IsOptional()
-  privilege: PrivilegeFilter;
+  privilege?: PrivilegeFilter;
 
+  /**
+   * Search term
+   */
   @IsString()
   @IsOptional()
-  search: string;
+  search?: string;
 }

@@ -1,12 +1,18 @@
 import { Type } from "class-transformer";
 import { IsNotEmpty, IsString, ValidateNested } from "class-validator";
-import { Submission } from "./Submission";
+import { SubmissionDto } from "./submission.dto";
 
 export class AddSubmissionDto {
+  /**
+   * Form answers submissions
+   */
   @ValidateNested()
-  @Type(() => Submission)
-  submissions: Submission[];
+  @Type(() => SubmissionDto)
+  submissions: SubmissionDto[];
 
+  /**
+   * Form session token
+   */
   @IsString()
   @IsNotEmpty()
   token: string;

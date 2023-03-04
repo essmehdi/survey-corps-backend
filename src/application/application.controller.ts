@@ -12,8 +12,11 @@ import { ApiTags } from "@nestjs/swagger";
 import { ApplicationStatus } from "@prisma/client";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApplicationService } from "./application.service";
-import { ApplicationDto } from "./dto/ApplicationDto";
-import { GetApplicationsDto, StatusOptions } from "./dto/GetApplicationsDto";
+import { CreateApplicationDto } from "./dto/add-application.dto";
+import {
+  ApplicationsQueryDto,
+  StatusOptions
+} from "./dto/applications-query.dto";
 
 @ApiTags("Alumni application")
 @Controller()
@@ -24,7 +27,7 @@ export class ApplicationController {
    * Sends an application for the form
    */
   @Post("applications")
-  async apply(@Body() applicationDto: ApplicationDto) {
+  async apply(@Body() applicationDto: CreateApplicationDto) {
     const { fullname, email } = applicationDto;
     return await this.applications.addApplication(fullname, email);
   }
@@ -34,7 +37,7 @@ export class ApplicationController {
    */
   @Get("admin/applications")
   @UseGuards(AdminGuard)
-  async getAllApplications(@Query() getApplicationsDto: GetApplicationsDto) {
+  async getAllApplications(@Query() getApplicationsDto: ApplicationsQueryDto) {
     const { status } = getApplicationsDto;
     if (status === StatusOptions.PENDING)
       return await this.applications.getAllPendingApplications();

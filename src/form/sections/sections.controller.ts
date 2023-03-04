@@ -10,11 +10,11 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
-import { AddSectionDto } from "./dto/AddSectionDto";
+import { AddSectionDto } from "./dto/add-section.dto";
 import {
   ChangeNextSectionDto,
   NextSectionType
-} from "./dto/ChangeNextSectionDto";
+} from "./dto/change-next-section.dto";
 import { SectionsService } from "./sections.service";
 
 @ApiTags("Admin form", "Sections")
@@ -23,17 +23,26 @@ import { SectionsService } from "./sections.service";
 export class SectionsController {
   constructor(private sections: SectionsService) {}
 
+  /**
+   * Gets all the sections
+   */
   @Get()
   async getAllSections() {
     // return await this.sections.allSections();
     return await this.sections.allSectionsWithOrderedQuestions();
   }
 
+  /**
+   * Gets a section by ID
+   */
   @Get(":section")
   async getSection(@Param("section") sectionId: number) {
     return await this.sections.section(sectionId);
   }
 
+  /**
+   * Adds a section
+   */
   @Post()
   async addSection(@Body() addSectionDto: AddSectionDto) {
     await this.sections.addSection(addSectionDto.title);
@@ -42,6 +51,9 @@ export class SectionsController {
     };
   }
 
+  /**
+   * Deletes a section
+   */
   @Delete(":section")
   async deleteSection(@Param("section") section: number) {
     await this.sections.deleteSection(section);
@@ -50,6 +62,9 @@ export class SectionsController {
     };
   }
 
+  /**
+   * Changes the next section of another
+   */
   @Post(":section/next")
   async nextSection(
     @Param("section") section: number,

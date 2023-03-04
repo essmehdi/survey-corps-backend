@@ -6,7 +6,10 @@ export enum StatusOptions {
   PENDING = "PENDING"
 }
 
-export class GetApplicationsDto {
+export class ApplicationsQueryDto {
+  /**
+   * Filter applications by status
+   */
   @IsNotEmpty()
   @IsEnum(StatusOptions)
   status: string;

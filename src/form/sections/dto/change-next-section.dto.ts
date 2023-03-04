@@ -37,23 +37,38 @@ function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
 }
 
 export class ConditionDto {
+  /**
+   * Conditional question ID
+   */
   @IsNumber()
   @IsPositive()
   question: number;
 
+  /**
+   * Mapping of the answers and next section
+   */
   @IsObject()
   @IsNumberToNumberObject()
   answers: Record<number, number>;
 }
 
 export class ChangeNextSectionDto {
+  /**
+   * Specifies if next section is direct or conditional
+   */
   @IsEnum(NextSectionType)
   type: NextSectionType;
 
+  /**
+   * Should be specified if type is 'SECTION'
+   */
   @ValidateIf((self) => self.type === NextSectionType.SECTION)
-  section: number;
+  section?: number;
 
+  /**
+   * Should be specified if type is 'CONDITION'
+   */
   @ValidateIf((self) => self.type === NextSectionType.CONDITION)
   @Type(() => ConditionDto)
-  condition: ConditionDto;
+  condition?: ConditionDto;
 }
