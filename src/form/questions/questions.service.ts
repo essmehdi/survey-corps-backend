@@ -194,13 +194,13 @@ export class QuestionsService {
     required?: boolean,
     hasOther?: boolean
   ) {
-    const question = await this.prisma.question.findFirst({
-      where: { sectionId, id: questionId }
-    });
-
-    if (question.type === QuestionType.FREEFIELD && hasOther) hasOther = false;
-
     try {
+      const question = await this.prisma.question.findFirst({
+        where: { sectionId, id: questionId }
+      });
+
+      if (question.type === QuestionType.FREEFIELD && hasOther)
+        hasOther = false;
       await this.prisma.question.updateMany({
         where: { sectionId, id: questionId },
         data: {
