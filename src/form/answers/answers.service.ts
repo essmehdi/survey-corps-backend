@@ -83,7 +83,7 @@ export class AnswersService {
       return await this.prisma.answer.updateMany({
         where: { id: anwserId, question: { id: questionId, sectionId } },
         data: { title }
-      });
+      })[0];
     } catch (error) {
       this.handleQueryException(error);
     }
