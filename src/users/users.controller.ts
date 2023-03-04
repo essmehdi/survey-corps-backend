@@ -9,6 +9,7 @@ import {
   Request,
   UseGuards
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
 import { RequestWithUser } from "src/auth/requestWithUser.interface";
@@ -17,6 +18,7 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersQueryDto } from "./dto/users-query.dto";
 import { UsersService } from "./users.service";
 
+@ApiTags("Users")
 @Controller("users")
 export class UsersController {
   constructor(private users: UsersService) {}

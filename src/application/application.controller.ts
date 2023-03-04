@@ -8,22 +8,30 @@ import {
   Query,
   UseGuards
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ApplicationStatus } from "@prisma/client";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApplicationService } from "./application.service";
 import { ApplicationDto } from "./dto/ApplicationDto";
 import { GetApplicationsDto, StatusOptions } from "./dto/GetApplicationsDto";
 
+@ApiTags("Alumni application")
 @Controller()
 export class ApplicationController {
   constructor(private applications: ApplicationService) {}
 
+  /**
+   * Sends an application for the form
+   */
   @Post("applications")
   async apply(@Body() applicationDto: ApplicationDto) {
     const { fullname, email } = applicationDto;
     return await this.applications.addApplication(fullname, email);
   }
 
+  /**
+   * Gets the list of applications
+   */
   @Get("admin/applications")
   @UseGuards(AdminGuard)
   async getAllApplications(@Query() getApplicationsDto: GetApplicationsDto) {
@@ -33,12 +41,18 @@ export class ApplicationController {
     return await this.applications.getAllRespondedApplications();
   }
 
+  /**
+   * Gets one application
+   */
   @Get("admin/applications/:application")
   @UseGuards(AdminGuard)
   async getApplication(@Param("application") applicationId: number) {
     return await this.applications.getApplication(applicationId);
   }
 
+  /**
+   * Accepts an application
+   */
   @Post("admin/applications/:application/accept")
   @UseGuards(AdminGuard)
   async acceptApplication(@Param("application") applicationId: number) {
@@ -51,6 +65,9 @@ export class ApplicationController {
     };
   }
 
+  /**
+   * Rejects an application
+   */
   @Post("admin/applications/:application/reject")
   @UseGuards(AdminGuard)
   async rejectApplication(@Param("application") applicationId: number) {

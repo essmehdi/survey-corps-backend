@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddSectionDto } from "./dto/AddSectionDto";
 import {
@@ -16,6 +17,7 @@ import {
 } from "./dto/ChangeNextSectionDto";
 import { SectionsService } from "./sections.service";
 
+@ApiTags("Admin form", "Sections")
 @Controller("admin/sections")
 @UseGuards(AdminGuard)
 export class SectionsController {

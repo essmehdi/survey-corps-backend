@@ -3,7 +3,9 @@ import { AddAnswerDto } from "./dto/AddAnswerDto";
 import { QuestionsService } from "../questions/questions.service";
 import { AnswersService } from "./answers.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
+import { ApiTags } from "@nestjs/swagger";
 
+@ApiTags("Admin form", "Answers")
 @Controller("admin/sections/:section/questions/:question/answers")
 @UseGuards(AdminGuard)
 export class AnswersController {

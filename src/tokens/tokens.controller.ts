@@ -10,12 +10,14 @@ import {
   UnauthorizedException,
   UseGuards
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookieAuthentication.guard";
 import { RequestWithUser } from "src/auth/requestWithUser.interface";
 import { TokensQueryDto, TokenStateFilter } from "./dto/tokens-query.dto";
 import { TokensService } from "./tokens.service";
 
+@ApiTags("Tokens")
 @Controller("tokens")
 export class TokensController {
   private readonly logger = new Logger(TokensController.name);

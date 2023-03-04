@@ -10,7 +10,9 @@ import { CookieAuthenticationGuard } from "./guards/cookieAuthentication.guard";
 import { LogInWithCredentialsGuard } from "./guards/logInWithCredentials.guard";
 import { RequestWithUser } from "./requestWithUser.interface";
 import { Response as ExpressResponse } from "express";
+import { ApiTags } from "@nestjs/swagger";
 
+@ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
   @Post("login")

@@ -7,11 +7,13 @@ import {
   Post,
   UseGuards
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddQuestionDto } from "./dto/AddQuestionDto";
 import { EditQuestionDto } from "./dto/EditQuestionDto";
 import { QuestionsService } from "./questions.service";
 
+@ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
 @UseGuards(AdminGuard)
 export class QuestionsController {

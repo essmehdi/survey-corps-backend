@@ -1,8 +1,10 @@
 import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { UnusedTokenGuard } from "src/tokens/guards/unusedToken.guard";
 import { QuestionsService } from "../questions/questions.service";
 import { SectionsService } from "../sections/sections.service";
 
+@ApiTags("Form session")
 @Controller("session/:token")
 @UseGuards(UnusedTokenGuard)
 export class SessionController {
