@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -85,7 +86,7 @@ export class QuestionsController {
   /**
    * Deletes a question in a section
    */
-  @Patch(":question")
+  @Delete(":question")
   async deleteQuestion(
     @Param("section") section: number,
     @Param("question") question: number
