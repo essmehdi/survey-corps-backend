@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { AddAnswerDto } from "./dto/add-answer.dto";
-import { QuestionsService } from "../questions/questions.service";
 import { AnswersService } from "./answers.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApiTags } from "@nestjs/swagger";
@@ -9,21 +8,18 @@ import { ApiTags } from "@nestjs/swagger";
 @Controller("admin/sections/:section/questions/:question/answers")
 @UseGuards(AdminGuard)
 export class AnswersController {
-  constructor(
-    private answers: AnswersService,
-    private questions: QuestionsService
-  ) {}
+  constructor(private answers: AnswersService) {}
 
   /**
    * Gets an answer by ID
    */
   @Get(":answer")
   async getAnswer(
-    @Param("sections") section: number,
+    @Param("section") section: number,
     @Param("question") question: number,
     @Param("answer") answer: number
   ) {
-    return await this.answers.getAnswers(section, question);
+    return await this.answers.getAnswer(section, question, answer);
   }
 
   /**
