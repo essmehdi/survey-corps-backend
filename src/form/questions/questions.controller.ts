@@ -12,6 +12,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddQuestionDto } from "./dto/add-question.dto";
 import { EditQuestionDto } from "./dto/edit-question.dto";
+import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
 
 @ApiTags("Admin form", "Questions")
@@ -80,6 +81,22 @@ export class QuestionsController {
     );
     return {
       message: "Question modified successfully"
+    };
+  }
+
+  /**
+   * Changes the order of a question in a section
+   */
+  @Patch(":question")
+  async reorderQuestion(
+    @Param("section") section: number,
+    @Param("question") question: number,
+    @Body() reorderQuestionDto: ReorderQuestionDto
+  ) {
+    const { previous } = reorderQuestionDto;
+    await this.questions.reorderQuestion(section, question, previous);
+    return {
+      message: "Question reordered successfully"
     };
   }
 
