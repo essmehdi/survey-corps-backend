@@ -11,6 +11,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model RegistrationToken {
+  id          Int         @id @default(autoincrement())
+  token       String      @unique
+}
+
 model User {
   id          Int         @id @default(autoincrement())
   fullname    String  
