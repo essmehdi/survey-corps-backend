@@ -1,23 +1,22 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException
 } from "@nestjs/common";
-import { Prisma, Privilege, User } from "@prisma/client";
+import { Prisma, Privilege } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
-import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
-import * as bcrypt from "bcrypt";
-import { NotFoundError } from "@prisma/client/runtime";
 import { PrismaError } from "prisma-error-enum";
 import { PrivilegeFilter } from "./dto/users-query.dto";
 import { paginatedResponse } from "src/utils/response";
 import { convertToTsquery } from "src/utils/strings";
-
-const charsPool =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_-=+";
+import { MailService } from "src/mail/mail.service";
+import { randomUUID } from "crypto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
+import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class UsersService {
@@ -53,16 +52,11 @@ export class UsersService {
     ...UsersService.PRIVILEGE_PROJECTION
   };
 
-  constructor(private prisma: PrismaService, private config: ConfigService) {}
-
-  private static generatePassword(length: number) {
-    let password = "";
-    for (let i = 0; i < length; i++)
-      password += charsPool.charAt(
-        Math.floor(Math.random() * charsPool.length)
-      );
-    return password;
-  }
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+    private mail: MailService
+  ) {}
 
   private handleQueryException(error: any) {
     this.logger.error(error);
@@ -189,50 +183,76 @@ export class UsersService {
     email: string,
     privilege: Privilege = "MEMBER"
   ) {
-    // Generate a random password for the user
-    const randomPassword =
-      process.env.NODE_ENV === "production"
-        ? UsersService.generatePassword(12)
-        : "password";
+    const token = randomUUID();
     try {
-      // Create the user
-      await this.prisma.user.create({
-        data: {
-          fullname,
-          email,
-          privilege,
-          password: await bcrypt.hash(randomPassword, await bcrypt.genSalt())
-        }
+      await this.prisma.$transaction(async (tx) => {
+        // Create the user
+        const newUser = await tx.user.create({
+          data: {
+            fullname,
+            email,
+            privilege
+          }
+        });
+        // Create registration token
+        await tx.registrationToken.create({
+          data: {
+            token,
+            user: {
+              connect: { id: newUser.id }
+            }
+          }
+        });
+        // Send mail
+        await this.mail.sendRegistrationEmail(email, fullname, token);
       });
     } catch (error) {
       this.handleQueryException(error);
     }
-    // Sending email to user if everything goes right
-    const registrationTransporter = nodemailer.createTransport({
-      service: this.config.get<string>("MAIL_SERVICE"),
-      auth: {
-        user: this.config.get<string>("MAIL_USERNAME"),
-        pass: this.config.get<string>("MAIL_PASSWORD")
-      },
-      from: `"ENSIAS Bridge Technical Team" <${this.config.get<string>(
-        "MAIL_USERNAME"
-      )}>`
-    });
-    await registrationTransporter.sendMail({
-      to: email,
-      subject: "ENSIAS Bridge Account creation",
-      text: `Hello ${fullname},
+  }
 
-Your ENSIAS account has been created. Use your email and the password provided below to authenticate on the platform.
+  async verifyRegistrationToken(token: string) {
+    try {
+      await this.prisma.registrationToken.findUniqueOrThrow({
+        where: { token }
+      });
+      return true;
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordsNotFound
+      ) {
+        return false;
+      }
+      this.handleQueryException(error);
+    }
+  }
 
-${randomPassword}
-
-Thank you for your collaboration and your committement.
-
-Regards.
-
-ENSIAS Bridge Survey Technical Team.
-      `
-    });
+  /**
+   * Completes user registration by setting a password
+   */
+  async registerUserPassword(token: string, password: string) {
+    try {
+      const t = await this.prisma.registrationToken.findUniqueOrThrow({
+        where: { token },
+        include: { user: true }
+      });
+      await this.prisma.user.update({
+        where: { id: t.user.id },
+        data: {
+          password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
+          isActive: true
+        }
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordsNotFound
+      ) {
+        throw new ForbiddenException("Invalid token");
+      } else {
+        throw new InternalServerErrorException("An error has occured");
+      }
+    }
   }
 }

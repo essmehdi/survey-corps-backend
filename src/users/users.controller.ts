@@ -13,6 +13,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
 import { RequestWithUser } from "src/auth/request-with-user.interface";
+import { RegisterUserPasswordDto } from "./dto/register-user-password.dto";
 import { RegisterUserDto } from "./dto/register-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersQueryDto } from "./dto/users-query.dto";
@@ -53,6 +54,26 @@ export class UsersController {
     await this.users.createUser(fullname, email, privilege);
     return {
       message: "User successfully registered"
+    };
+  }
+
+  @Get("register/:token")
+  async verifyRegistrationToken(@Param("token") token: string) {
+    return await this.users.verifyRegistrationToken(token);
+  }
+
+  /**
+   * Registers a password for user
+   */
+  @Post("register/:token")
+  async registerUserPassword(
+    @Param("token") token: string,
+    @Body() registerUserPasswordDto: RegisterUserPasswordDto
+  ) {
+    const { password } = registerUserPasswordDto;
+    await this.users.registerUserPassword(token, password);
+    return {
+      message: "Password updated successfully"
     };
   }
 
