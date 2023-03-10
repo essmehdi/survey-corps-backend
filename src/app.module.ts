@@ -10,6 +10,9 @@ import { ConfigModule } from "@nestjs/config";
 import { ApplicationModule } from "./application/application.module";
 import { PrismaService } from "./prisma/prisma.service";
 import { TokensModule } from "./tokens/tokens.module";
+import { MailModule } from "./mail/mail.module";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { join } from "path";
 
 @Module({
   imports: [
@@ -18,8 +21,12 @@ import { TokensModule } from "./tokens/tokens.module";
     FormModule,
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, "..", "static")
+    }),
     ApplicationModule,
-    TokensModule
+    TokensModule,
+    MailModule
   ],
   controllers: [AppController],
   providers: [AppService, UsersService]
