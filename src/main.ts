@@ -5,6 +5,7 @@ import * as passport from "passport";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import * as PostgreSQLStore from "connect-pg-simple";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -28,8 +29,13 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Cookie sessions
+  const pgSessionStore = PostgreSQLStore(session);
   app.use(
     session({
+      store: new pgSessionStore({
+        conString: configService.get("DATABASE_URL"),
+        createTableIfMissing: true
+      }),
       secret: configService.get("SESSION_SECRET"),
       resave: false,
       saveUninitialized: false,
