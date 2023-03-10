@@ -59,7 +59,9 @@ export class UsersController {
 
   @Get("register/:token")
   async verifyRegistrationToken(@Param("token") token: string) {
-    return await this.users.verifyRegistrationToken(token);
+    return {
+      valid: await this.users.verifyRegistrationToken(token)
+    };
   }
 
   /**
