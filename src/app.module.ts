@@ -21,9 +21,6 @@ import { join } from "path";
     FormModule,
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, "..", "static")
-    }),
     ApplicationModule,
     TokensModule,
     MailModule
