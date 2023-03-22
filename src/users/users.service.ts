@@ -4,7 +4,8 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException
+  NotFoundException,
+  UnprocessableEntityException
 } from "@nestjs/common";
 import { Prisma, Privilege } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -21,10 +22,12 @@ import * as bcrypt from "bcrypt";
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
   private static PUBLIC_PROJECTION = {
     id: true,
     fullname: true,
     email: true,
+    isActive: true,
     _count: {
       select: {
         tokens: {
@@ -185,27 +188,21 @@ export class UsersService {
   ) {
     const token = randomUUID();
     try {
-      await this.prisma.$transaction(async (tx) => {
-        // Create the user
-        const newUser = await tx.user.create({
-          data: {
-            fullname,
-            email,
-            privilege
-          }
-        });
-        // Create registration token
-        await tx.registrationToken.create({
-          data: {
-            token,
-            user: {
-              connect: { id: newUser.id }
+      // Create the user
+      await this.prisma.user.create({
+        data: {
+          fullname,
+          email,
+          privilege,
+          registrationToken: {
+            create: {
+              token
             }
           }
-        });
-        // Send mail
-        await this.mail.sendRegistrationEmail(email, fullname, token);
+        }
       });
+      // Send mail
+      await this.mail.sendRegistrationEmail(email, fullname, token);
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -213,16 +210,30 @@ export class UsersService {
 
   async verifyRegistrationToken(token: string) {
     try {
-      await this.prisma.registrationToken.findUniqueOrThrow({
+      const t = await this.prisma.registrationToken.findUniqueOrThrow({
         where: { token }
       });
-      return true;
+      // Check if it's not expired
+      if (
+        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        UsersService.REGISTRATION_TOKEN_LIFESPAN
+      ) {
+        return {
+          valid: false,
+          expired: true
+        };
+      }
+      return {
+        valid: true
+      };
     } catch (error) {
       if (
         error instanceof PrismaClientKnownRequestError &&
         error.code === PrismaError.RecordsNotFound
       ) {
-        return false;
+        return {
+          valid: false
+        };
       }
       this.handleQueryException(error);
     }
@@ -237,11 +248,20 @@ export class UsersService {
         where: { token },
         include: { user: true }
       });
+      if (
+        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        UsersService.REGISTRATION_TOKEN_LIFESPAN
+      ) {
+        throw new ForbiddenException("Expired token");
+      }
       await this.prisma.user.update({
         where: { id: t.user.id },
         data: {
           password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
-          isActive: true
+          isActive: true,
+          registrationToken: {
+            delete: true
+          }
         }
       });
     } catch (error) {
@@ -253,6 +273,56 @@ export class UsersService {
       } else {
         throw new InternalServerErrorException("An error has occured");
       }
+    }
+  }
+
+  /**
+   * Resends the registration link to the user
+   * @param userId User's id
+   */
+  async resendRegistrationLink(userId: number) {
+    try {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        include: { registrationToken: true }
+      });
+      if (user.isActive || user.password !== null) {
+        throw new UnprocessableEntityException(
+          "This user is already registered"
+        );
+      }
+      const newToken = randomUUID();
+      await this.prisma.registrationToken.update({
+        where: { id: user.registrationToken.id },
+        data: {
+          token: newToken,
+          createdAt: new Date()
+        }
+      });
+      await this.mail.sendRegistrationEmail(
+        user.email,
+        user.fullname,
+        newToken
+      );
+    } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
+
+  /**
+   * Disables user account
+   * @param userId User's id
+   */
+  async disableUser(userId: number) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: false
+        }
+      });
+    } catch (error) {
+      this.handleQueryException(error);
     }
   }
 }

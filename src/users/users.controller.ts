@@ -57,11 +57,21 @@ export class UsersController {
     };
   }
 
+  /**
+   * Resends registration link to unregistered user
+   */
+  @Post(":id/resend")
+  @UseGuards(AdminGuard)
+  async resendRegistrationLink(@Param("id") id: number) {
+    return await this.users.resendRegistrationLink(id);
+  }
+
+  /**
+   * Verifies if the provided token is valid (exists & not expired)
+   */
   @Get("register/:token")
   async verifyRegistrationToken(@Param("token") token: string) {
-    return {
-      valid: await this.users.verifyRegistrationToken(token)
-    };
+    return await this.users.verifyRegistrationToken(token);
   }
 
   /**
@@ -92,6 +102,18 @@ export class UsersController {
     await this.users.updateUser(id, fullname, email, privilege);
     return {
       message: "User updated successfully"
+    };
+  }
+
+  /**
+   * Disables user account
+   */
+  @Post(":id/disable")
+  @UseGuards(AdminGuard)
+  async disableUser(@Param("id") id: number) {
+    await this.users.disableUser(id);
+    return {
+      message: "User account disabled successfully"
     };
   }
 
