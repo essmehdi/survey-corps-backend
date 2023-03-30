@@ -137,7 +137,9 @@ export class TokensService {
                 OR: search
                   .trim()
                   .split(" ")
-                  .map((word) => ({ fullname: { contains: word } }))
+                  .map((word) => ({
+                    fullname: { contains: word, mode: "insensitive" }
+                  }))
               }
             }
           : {}),
