@@ -116,8 +116,24 @@ export class TokensService {
    * Gets all created tokens
    * @param limit Number of elements in a page
    */
-  async allTokens(page: number = 1, limit: number = 30) {
+  async allTokens(
+    page: number = 1,
+    limit: number = 30,
+    stateFilter: TokenStateFilter = TokenStateFilter.ALL,
+    userId?: number
+  ) {
+    const stateFilterArgs =
+      stateFilter === TokenStateFilter.ALL
+        ? {}
+        : stateFilter === TokenStateFilter.PENDING
+        ? { submitted: false }
+        : { submitted: true };
+
     const [tokens, count] = await this.getTokensAndCount({
+      where: {
+        ...(userId ? { user: { id: userId } } : {}),
+        ...stateFilterArgs
+      },
       take: limit,
       skip: limit * (page - 1),
       orderBy: { id: "asc" }
