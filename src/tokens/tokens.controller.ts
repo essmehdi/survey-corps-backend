@@ -14,6 +14,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
 import { RequestWithUser } from "src/auth/request-with-user.interface";
+import { AllTokensQueryDto } from "./dto/all-tokens-query.dto";
 import { TokensQueryDto, TokenStateFilter } from "./dto/tokens-query.dto";
 import { TokensService } from "./tokens.service";
 
@@ -60,8 +61,9 @@ export class TokensController {
    */
   @Get("all")
   @UseGuards(AdminGuard)
-  async getAllTokens(@Query() page: number, @Query() limit: number) {
-    return await this.tokens.allTokens(page, limit);
+  async getAllTokens(@Query() allTokensQueryDto: AllTokensQueryDto) {
+    const { page, limit, state, userId } = allTokensQueryDto;
+    return await this.tokens.allTokens(page, limit, state, userId);
   }
 
   /**
