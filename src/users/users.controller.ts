@@ -40,8 +40,8 @@ export class UsersController {
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
   async me(@Request() request: RequestWithUser) {
-    const { fullname, email, privilege } = request.user;
-    return { fullname, email, privilege };
+    const { id, fullname, email, privilege } = request.user;
+    return { id, fullname, email, privilege };
   }
 
   /**
