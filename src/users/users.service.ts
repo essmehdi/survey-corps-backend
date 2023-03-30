@@ -7,7 +7,7 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { Prisma, Privilege } from "@prisma/client";
+import { Prisma, PrismaClient, Privilege } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaError } from "prisma-error-enum";
@@ -21,6 +21,7 @@ import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class UsersService {
+  private xprisma: Omit<PrismaClient, "$use">;
   private readonly logger = new Logger(UsersService.name);
   private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
   private static PUBLIC_PROJECTION = {
@@ -28,6 +29,7 @@ export class UsersService {
     fullname: true,
     email: true,
     isActive: true,
+    registered: true,
     _count: {
       select: {
         tokens: {
@@ -59,7 +61,21 @@ export class UsersService {
     private prisma: PrismaService,
     private config: ConfigService,
     private mail: MailService
-  ) {}
+  ) {
+    this.xprisma = prisma.$extends({
+      name: "UserExtendedPrismaClient",
+      result: {
+        user: {
+          registered: {
+            needs: { isActive: true, password: true },
+            compute(user) {
+              return user.password !== null;
+            }
+          }
+        }
+      }
+    });
+  }
 
   private handleQueryException(error: any) {
     this.logger.error(error);
@@ -77,9 +93,9 @@ export class UsersService {
   }
 
   private async getUsersAndCount(userFindManyArgs: Prisma.UserFindManyArgs) {
-    return await this.prisma.$transaction([
-      this.prisma.user.findMany(userFindManyArgs),
-      this.prisma.user.count({ where: userFindManyArgs.where })
+    return await this.xprisma.$transaction([
+      this.xprisma.user.findMany(userFindManyArgs),
+      this.xprisma.user.count({ where: userFindManyArgs.where })
     ]);
   }
 
@@ -113,7 +129,7 @@ export class UsersService {
 
   async getUserById(id: number, allFields: boolean = false) {
     try {
-      return await this.prisma.user.findUniqueOrThrow({
+      return await this.xprisma.user.findUniqueOrThrow({
         where: { id },
         select: allFields
           ? UsersService.ALL_PROJECTION
@@ -126,7 +142,7 @@ export class UsersService {
 
   async getUserByEmail(email: string, allFields: boolean = false) {
     try {
-      return await this.prisma.user.findUniqueOrThrow({
+      return await this.xprisma.user.findUniqueOrThrow({
         where: { email },
         select: allFields
           ? UsersService.ALL_PROJECTION
@@ -144,7 +160,7 @@ export class UsersService {
     privilege?: Privilege
   ) {
     try {
-      await this.prisma.user.update({
+      await this.xprisma.user.update({
         where: { id },
         data: { fullname, email, ...(privilege ? { privilege } : {}) }
       });
@@ -155,7 +171,7 @@ export class UsersService {
 
   async getLeaderboard() {
     return (
-      await this.prisma.user.findMany({
+      await this.xprisma.user.findMany({
         where: {
           tokens: {
             some: {}
@@ -189,7 +205,7 @@ export class UsersService {
     const token = randomUUID();
     try {
       // Create the user
-      await this.prisma.user.create({
+      await this.xprisma.user.create({
         data: {
           fullname,
           email,
@@ -210,7 +226,7 @@ export class UsersService {
 
   async verifyRegistrationToken(token: string) {
     try {
-      const t = await this.prisma.registrationToken.findUniqueOrThrow({
+      const t = await this.xprisma.registrationToken.findUniqueOrThrow({
         where: { token }
       });
       // Check if it's not expired
@@ -244,7 +260,7 @@ export class UsersService {
    */
   async registerUserPassword(token: string, password: string) {
     try {
-      const t = await this.prisma.registrationToken.findUniqueOrThrow({
+      const t = await this.xprisma.registrationToken.findUniqueOrThrow({
         where: { token },
         include: { user: true }
       });
@@ -254,7 +270,7 @@ export class UsersService {
       ) {
         throw new ForbiddenException("Expired token");
       }
-      await this.prisma.user.update({
+      await this.xprisma.user.update({
         where: { id: t.user.id },
         data: {
           password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
@@ -282,7 +298,7 @@ export class UsersService {
    */
   async resendRegistrationLink(userId: number) {
     try {
-      const user = await this.prisma.user.findUniqueOrThrow({
+      const user = await this.xprisma.user.findUniqueOrThrow({
         where: { id: userId },
         include: { registrationToken: true }
       });
@@ -292,7 +308,7 @@ export class UsersService {
         );
       }
       const newToken = randomUUID();
-      await this.prisma.registrationToken.update({
+      await this.xprisma.registrationToken.update({
         where: { id: user.registrationToken.id },
         data: {
           token: newToken,
@@ -315,7 +331,7 @@ export class UsersService {
    */
   async disableUser(userId: number) {
     try {
-      await this.prisma.user.update({
+      await this.xprisma.user.update({
         where: { id: userId },
         data: {
           isActive: false
