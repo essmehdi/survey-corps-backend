@@ -62,8 +62,8 @@ export class TokensController {
   @Get("all")
   @UseGuards(AdminGuard)
   async getAllTokens(@Query() allTokensQueryDto: AllTokensQueryDto) {
-    const { page, limit, state, userId } = allTokensQueryDto;
-    return await this.tokens.allTokens(page, limit, state, userId);
+    const { page, limit, state, search } = allTokensQueryDto;
+    return await this.tokens.allTokens(page, limit, state, search);
   }
 
   /**

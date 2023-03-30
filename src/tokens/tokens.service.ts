@@ -120,7 +120,7 @@ export class TokensService {
     page: number = 1,
     limit: number = 30,
     stateFilter: TokenStateFilter = TokenStateFilter.ALL,
-    userId?: number
+    search?: string
   ) {
     const stateFilterArgs =
       stateFilter === TokenStateFilter.ALL
@@ -131,12 +131,22 @@ export class TokensService {
 
     const [tokens, count] = await this.getTokensAndCount({
       where: {
-        ...(userId ? { user: { id: userId } } : {}),
+        ...(search
+          ? {
+              user: {
+                OR: search
+                  .trim()
+                  .split(" ")
+                  .map((word) => ({ fullname: { contains: word } }))
+              }
+            }
+          : {}),
         ...stateFilterArgs
       },
       take: limit,
       skip: limit * (page - 1),
-      orderBy: { id: "asc" }
+      orderBy: { id: "asc" },
+      include: { user: { select: { id: true, fullname: true } } }
     });
 
     return paginatedResponse(tokens, page, limit, count);
