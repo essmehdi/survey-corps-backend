@@ -90,6 +90,15 @@ export class UsersController {
   }
 
   /**
+   * Gets user data
+   */
+  @Get(":id")
+  @UseGuards(AdminGuard)
+  async getUser(@Param("id") id: number) {
+    return await this.users.getUserById(id, false);
+  }
+
+  /**
    * Updates user data
    */
   @Patch(":id")
