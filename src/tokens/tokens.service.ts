@@ -147,7 +147,7 @@ export class TokensService {
       },
       take: limit,
       skip: limit * (page - 1),
-      orderBy: { id: "asc" },
+      orderBy: { createdAt: "desc" },
       include: { user: { select: { id: true, fullname: true } } }
     });
 
