@@ -9,7 +9,8 @@ import {
   Request,
   UseGuards
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { Prisma } from "@prisma/client";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
 import { RequestWithUser } from "src/auth/request-with-user.interface";
@@ -31,7 +32,7 @@ export class UsersController {
   @UseGuards(AdminGuard)
   async allUsers(@Query() usersQueryDto: UsersQueryDto) {
     const { privilege, page, limit, search } = usersQueryDto;
-    return this.users.getAllUsers(privilege, page, limit, search);
+    return await this.users.getAllUsers(privilege, page, limit, search);
   }
 
   /**
