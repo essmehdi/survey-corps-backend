@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -71,7 +72,7 @@ export class QuestionsController {
     @Body() editQuestionDto: EditQuestionDto
   ) {
     const { title, type, required, hasOther } = editQuestionDto;
-    await this.questions.editQuestion(
+    return await this.questions.editQuestion(
       section,
       question,
       title,
@@ -79,9 +80,6 @@ export class QuestionsController {
       required,
       hasOther
     );
-    return {
-      message: "Question modified successfully"
-    };
   }
 
   /**

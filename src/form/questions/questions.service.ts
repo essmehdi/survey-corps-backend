@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -26,11 +27,18 @@ export class QuestionsService {
   constructor(private prisma: PrismaService) {}
 
   private handleQueryException(error: any, entity: string = "question") {
-    this.logger.error(error);
+    this.logger.error(error.meta);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === PrismaError.RecordDoesNotExist)
         throw new NotFoundException(`The requested ${entity} does not exist`);
-      else if (error.code === PrismaError.RecordsNotFound)
+      else if (
+        error.code === PrismaError.ForeignConstraintViolation &&
+        (error.meta.field_name as string).includes("Condition_answerId_fkey")
+      ) {
+        throw new ConflictException(
+          "You cannot change the type of this question because it is used as a condition for the next section"
+        );
+      } else if (error.code === PrismaError.RecordsNotFound)
         throw new NotFoundException(`The requested ${entity} was not found`);
     }
     throw new InternalServerErrorException("An error has occured");
@@ -274,16 +282,29 @@ export class QuestionsService {
         where: { sectionId, id: questionId }
       });
 
-      if (question.type === QuestionType.FREEFIELD && hasOther)
-        hasOther = false;
-      await this.prisma.question.updateMany({
-        where: { sectionId, id: questionId },
-        data: {
-          ...(title ? { title } : {}),
-          ...(type ? { type } : {}),
-          ...(required ? { required } : {}),
-          ...(hasOther ? { hasOther } : {})
+      return await this.prisma.$transaction(async (tx) => {
+        if (question.type === QuestionType.FREEFIELD && hasOther)
+          hasOther = false;
+
+        await tx.question.updateMany({
+          where: { sectionId, id: questionId },
+          data: {
+            ...(title ? { title } : {}),
+            ...(type ? { type } : {}),
+            ...(required ? { required } : {}),
+            ...(hasOther !== undefined ? { hasOther } : {})
+          }
+        });
+
+        if (type === QuestionType.FREEFIELD) {
+          await tx.answer.deleteMany({
+            where: { questionId }
+          });
         }
+
+        return await tx.question.findFirst({
+          where: { sectionId, id: questionId }
+        });
       });
     } catch (error) {
       this.handleQueryException(error);
