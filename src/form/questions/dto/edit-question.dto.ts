@@ -39,4 +39,12 @@ export class EditQuestionDto {
   @IsBoolean()
   @IsOptional()
   hasOther?: boolean;
+
+  /**
+   * Specifies the regex of the question if it is a freefield question
+   */
+  @ValidateIf((o) => o.type === "FREEFIELD")
+  @IsString()
+  @IsOptional()
+  regex?: string;
 }

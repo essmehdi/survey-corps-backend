@@ -76,14 +76,18 @@ export class AnswersService {
   async editAnswer(
     sectionId: number,
     questionId: number,
-    anwserId: number,
+    answerId: number,
     title: string
   ) {
     try {
-      return await this.prisma.answer.updateMany({
-        where: { id: anwserId, question: { id: questionId, sectionId } },
+      await this.prisma.answer.updateMany({
+        where: { id: answerId, question: { id: questionId, sectionId } },
         data: { title }
-      })[0];
+      });
+
+      return await this.prisma.answer.findFirst({
+        where: { id: answerId, question: { id: questionId, sectionId } }
+      });
     } catch (error) {
       this.handleQueryException(error);
     }

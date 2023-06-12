@@ -71,14 +71,15 @@ export class QuestionsController {
     @Param("question") question: number,
     @Body() editQuestionDto: EditQuestionDto
   ) {
-    const { title, type, required, hasOther } = editQuestionDto;
+    const { title, type, required, hasOther, regex } = editQuestionDto;
     return await this.questions.editQuestion(
       section,
       question,
       title,
       type,
       required,
-      hasOther
+      hasOther,
+      regex
     );
   }
 

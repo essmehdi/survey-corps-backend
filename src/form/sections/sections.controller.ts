@@ -16,6 +16,7 @@ import {
   NextSectionType
 } from "./dto/change-next-section.dto";
 import { SectionsService } from "./sections.service";
+import { EditSectionDto } from "./dto/edit-section.dto";
 
 @ApiTags("Admin form", "Sections")
 @Controller("admin/sections")
@@ -49,6 +50,17 @@ export class SectionsController {
     return {
       message: "Section added succesfully"
     };
+  }
+
+  /**
+   * Edits a section
+   */
+  @Patch(":section")
+  async editSection(
+    @Param("section") sectionId: number,
+    @Body() editSectionDto: EditSectionDto
+  ) {
+    return await this.sections.editSection(sectionId, editSectionDto.title);
   }
 
   /**

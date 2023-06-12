@@ -144,6 +144,10 @@ export class SectionsService {
       where: { id: sectionId },
       data: { title }
     });
+
+    return await this.prisma.questionSection.findUnique({
+      where: { id: sectionId }
+    });
   }
 
   /**

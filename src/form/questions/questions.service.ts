@@ -27,7 +27,7 @@ export class QuestionsService {
   constructor(private prisma: PrismaService) {}
 
   private handleQueryException(error: any, entity: string = "question") {
-    this.logger.error(error.meta);
+    this.logger.error(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === PrismaError.RecordDoesNotExist)
         throw new NotFoundException(`The requested ${entity} does not exist`);
@@ -275,12 +275,23 @@ export class QuestionsService {
     title?: string,
     type?: QuestionType,
     required?: boolean,
-    hasOther?: boolean
+    hasOther?: boolean,
+    regex?: string
   ) {
     try {
       const question = await this.prisma.question.findFirst({
         where: { sectionId, id: questionId }
       });
+
+      if (
+        regex &&
+        ((type && type !== QuestionType.FREEFIELD) ||
+          (!type && question.type !== QuestionType.FREEFIELD))
+      ) {
+        throw new BadRequestException(
+          "Regex can only be set for freefield questions"
+        );
+      }
 
       return await this.prisma.$transaction(async (tx) => {
         if (question.type === QuestionType.FREEFIELD && hasOther)
@@ -292,7 +303,8 @@ export class QuestionsService {
             ...(title ? { title } : {}),
             ...(type ? { type } : {}),
             ...(required ? { required } : {}),
-            ...(hasOther !== undefined ? { hasOther } : {})
+            ...(hasOther !== undefined ? { hasOther } : {}),
+            ...(typeof regex === "string" ? { regex } : {})
           }
         });
 
