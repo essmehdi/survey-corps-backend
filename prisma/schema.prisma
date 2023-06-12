@@ -8,6 +8,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model FormConfig {
+  id        Int     @id @default(autoincrement())
+  key       String  @unique
+  value     String
+  createdAt DateTime @default(now())
+}
+
 model RegistrationToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique
