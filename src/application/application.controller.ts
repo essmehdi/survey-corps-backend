@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -49,7 +50,9 @@ export class ApplicationController {
    */
   @Get("admin/applications/:application")
   @UseGuards(AdminGuard)
-  async getApplication(@Param("application") applicationId: number) {
+  async getApplication(
+    @Param("application", ParseIntPipe) applicationId: number
+  ) {
     return await this.applications.getApplication(applicationId);
   }
 
@@ -58,7 +61,9 @@ export class ApplicationController {
    */
   @Post("admin/applications/:application/accept")
   @UseGuards(AdminGuard)
-  async acceptApplication(@Param("application") applicationId: number) {
+  async acceptApplication(
+    @Param("application", ParseIntPipe) applicationId: number
+  ) {
     await this.applications.respondToApplication(
       applicationId,
       ApplicationStatus.GRANTED
@@ -73,7 +78,9 @@ export class ApplicationController {
    */
   @Post("admin/applications/:application/reject")
   @UseGuards(AdminGuard)
-  async rejectApplication(@Param("application") applicationId: number) {
+  async rejectApplication(
+    @Param("application", ParseIntPipe) applicationId: number
+  ) {
     await this.applications.respondToApplication(
       applicationId,
       ApplicationStatus.REJECTED

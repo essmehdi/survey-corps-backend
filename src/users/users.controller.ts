@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -63,7 +65,7 @@ export class UsersController {
    */
   @Post(":id/resend")
   @UseGuards(AdminGuard)
-  async resendRegistrationLink(@Param("id") id: number) {
+  async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
     return await this.users.resendRegistrationLink(id);
   }
 
@@ -71,7 +73,7 @@ export class UsersController {
    * Verifies if the provided token is valid (exists & not expired)
    */
   @Get("register/:token")
-  async verifyRegistrationToken(@Param("token") token: string) {
+  async verifyRegistrationToken(@Param("token", ParseUUIDPipe) token: string) {
     return await this.users.verifyRegistrationToken(token);
   }
 
@@ -80,7 +82,7 @@ export class UsersController {
    */
   @Post("register/:token")
   async registerUserPassword(
-    @Param("token") token: string,
+    @Param("token", ParseUUIDPipe) token: string,
     @Body() registerUserPasswordDto: RegisterUserPasswordDto
   ) {
     const { password } = registerUserPasswordDto;
@@ -95,7 +97,7 @@ export class UsersController {
    */
   @Get(":id")
   @UseGuards(AdminGuard)
-  async getUser(@Param("id") id: number) {
+  async getUser(@Param("id", ParseIntPipe) id: number) {
     return await this.users.getUserById(id, false);
   }
 
@@ -105,7 +107,7 @@ export class UsersController {
   @Patch(":id")
   @UseGuards(AdminGuard)
   async updateUser(
-    @Param("id") id: number,
+    @Param("id", ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto
   ) {
     const { fullname, email, privilege } = updateUserDto;
@@ -120,7 +122,7 @@ export class UsersController {
    */
   @Post(":id/disable")
   @UseGuards(AdminGuard)
-  async disableUser(@Param("id") id: number) {
+  async disableUser(@Param("id", ParseIntPipe) id: number) {
     await this.users.disableUser(id);
     return {
       message: "User account disabled successfully"
