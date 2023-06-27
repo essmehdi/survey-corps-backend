@@ -6,9 +6,7 @@ import { FormConfigService } from "../config/config.service";
 export class UnpublishedFormGuard implements CanActivate {
   constructor(private config: FormConfigService) {}
 
-  async canActivate(
-    context: ExecutionContext
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  async canActivate() {
     return !(await this.config.isFormPublished());
   }
 }

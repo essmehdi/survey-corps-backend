@@ -6,17 +6,22 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { AddAnswerDto } from "./dto/add-answer.dto";
 import { AnswersService } from "./answers.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApiTags } from "@nestjs/swagger";
 import { EditAnswerDto } from "./dto/edit-answer.dto";
+import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
+import { EditInterceptor } from "../interceptors/edit.interceptor";
 
 @ApiTags("Admin form", "Answers")
 @Controller("admin/sections/:section/questions/:question/answers")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
+@UseInterceptors(EditInterceptor)
 export class AnswersController {
   constructor(private answers: AnswersService) {}
 

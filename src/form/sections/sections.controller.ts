@@ -6,7 +6,8 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
@@ -17,10 +18,14 @@ import {
 } from "./dto/change-next-section.dto";
 import { SectionsService } from "./sections.service";
 import { EditSectionDto } from "./dto/edit-section.dto";
+import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
+import { EditInterceptor } from "../interceptors/edit.interceptor";
 
 @ApiTags("Admin form", "Sections")
 @Controller("admin/sections")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
+@UseInterceptors(EditInterceptor)
 export class SectionsController {
   constructor(private sections: SectionsService) {}
 

@@ -17,10 +17,12 @@ import { EditQuestionDto } from "./dto/edit-question.dto";
 import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
 import { EditInterceptor } from "../interceptors/edit.interceptor";
+import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
 @UseInterceptors(EditInterceptor)
 export class QuestionsController {
   constructor(private questions: QuestionsService) {}
