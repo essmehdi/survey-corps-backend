@@ -38,7 +38,7 @@ export class FormConfigService {
   /**
    * Checks if the form is published
    */
-  private async isFormPublished() {
+  async isFormPublished() {
     const published = await this.getConfig("published");
     return published.value === "true";
   }
