@@ -21,7 +21,7 @@ import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class UsersService {
-  private xprisma: Omit<PrismaClient, "$use">;
+  private xprisma: any;
   private readonly logger = new Logger(UsersService.name);
   private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
   private static PUBLIC_PROJECTION = {
