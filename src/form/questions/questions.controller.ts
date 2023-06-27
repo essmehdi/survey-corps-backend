@@ -7,7 +7,8 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
@@ -15,10 +16,12 @@ import { AddQuestionDto } from "./dto/add-question.dto";
 import { EditQuestionDto } from "./dto/edit-question.dto";
 import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
+import { EditInterceptor } from "../interceptors/edit.interceptor";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
 @UseGuards(AdminGuard)
+@UseInterceptors(EditInterceptor)
 export class QuestionsController {
   constructor(private questions: QuestionsService) {}
 

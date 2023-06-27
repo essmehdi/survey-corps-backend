@@ -1,9 +1,13 @@
 import { Injectable } from "@nestjs/common";
+import { NotifierService } from "src/notifier/notifier.service";
 import { PrismaService } from "src/prisma/prisma.service";
 
 @Injectable()
-export class ConfigService {
-  constructor(private prisma: PrismaService) {
+export class FormConfigService {
+  constructor(
+    private prisma: PrismaService,
+    private notifier: NotifierService
+  ) {
     this.initializeConfig();
   }
 
@@ -15,10 +19,6 @@ export class ConfigService {
           {
             key: "published",
             value: "false"
-          },
-          {
-            key: "currentEditorId",
-            value: ""
           }
         ]
       });
@@ -53,24 +53,18 @@ export class ConfigService {
       where: { key: "published" },
       data: { value: publish ? "true" : "false" }
     });
+    this.notifier.addEvent("formConfigChange", await this.getAllConfig());
   }
 
   /**
-   * Gets the current editor ID
+   * Get the config as an object
    */
-  async getCurrentEditorId() {
-    const editorId = await this.getConfig("currentEditorId");
-    return Number.parseInt(editorId.value);
-  }
-
-  /**
-   * Sets the current editor ID
-   * @param editorId The editor ID to set
-   */
-  async setCurrentEditorId(editorId: number) {
-    await this.prisma.formConfig.update({
-      where: { key: "currentEditorId" },
-      data: { value: editorId.toString() }
-    });
+  async getAllConfig() {
+    const config = await this.prisma.formConfig.findMany();
+    const configObject = {};
+    for (const item of config) {
+      configObject[item.key] = item.value;
+    }
+    return configObject;
   }
 }
