@@ -1,5 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
-import { Observable } from "rxjs";
+import {
+  CanActivate,
+  ForbiddenException,
+  HttpStatus,
+  Injectable
+} from "@nestjs/common";
 import { FormConfigService } from "../config/config.service";
 
 @Injectable()
@@ -7,6 +11,11 @@ export class UnpublishedFormGuard implements CanActivate {
   constructor(private config: FormConfigService) {}
 
   async canActivate() {
-    return !(await this.config.isFormPublished());
+    const isFormPublished = await this.config.isFormPublished();
+    if (!isFormPublished) return true;
+    throw new ForbiddenException({
+      statusCode: HttpStatus.FORBIDDEN,
+      message: "You cannot modify the form while it is published"
+    });
   }
 }
