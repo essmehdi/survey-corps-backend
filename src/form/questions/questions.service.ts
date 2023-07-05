@@ -324,8 +324,44 @@ export class QuestionsService {
   }
 
   async deleteQuestion(sectionId: number, questionId: number) {
-    await this.prisma.question.deleteMany({
-      where: { id: questionId, sectionId }
+    const question = await this.prisma.question.findFirst({
+      where: { id: questionId, sectionId },
+      include: {
+        nextQuestion: true,
+        previousQuestion: true
+      }
+    });
+
+    if (!question) {
+      throw new NotFoundException("Question not found");
+    }
+
+    if (!question.nextQuestion && !question.previousQuestion) {
+      await this.prisma.question.delete({
+        where: { id: questionId }
+      });
+      return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (question.previousQuestion) {
+        await tx.question.update({
+          where: { id: question.previousQuestion.id },
+          data: {
+            nextQuestion: {
+              ...(question.nextQuestion !== null
+                ? {
+                    connect: { id: question.nextQuestion.id }
+                  }
+                : { disconnect: true })
+            }
+          }
+        });
+      }
+
+      await tx.question.deleteMany({
+        where: { id: questionId, sectionId }
+      });
     });
   }
 }
