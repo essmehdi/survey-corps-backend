@@ -302,7 +302,7 @@ export class QuestionsService {
           data: {
             ...(title ? { title } : {}),
             ...(type ? { type } : {}),
-            ...(required ? { required } : {}),
+            ...(typeof required === "boolean" ? { required } : {}),
             ...(hasOther !== undefined ? { hasOther } : {}),
             ...(typeof regex === "string" ? { regex } : {})
           }
