@@ -183,20 +183,11 @@ export class QuestionsService {
     }
   }
 
-  // TODO: Complete the reordering logic
   async reorderQuestion(
     sectionId: number,
     questionId: number,
     previous: number
   ) {
-    const firstQuestion = await this.prisma.question.findFirst({
-      where: { section: { id: sectionId }, previousQuestion: null }
-    });
-
-    if (!firstQuestion) {
-      throw new BadRequestException("No question to reorder: empty section");
-    }
-
     const question = await this.prisma.question.findFirstOrThrow({
       where: { section: { id: sectionId }, id: questionId },
       include: {
@@ -205,67 +196,85 @@ export class QuestionsService {
       }
     });
 
-    const newPrevious = previous
-      ? await this.prisma.question.findFirstOrThrow({
-          where: { section: { id: sectionId }, id: previous },
-          include: {
-            nextQuestion: true
-          }
-        })
-      : null;
-
-    if (
-      newPrevious !== null &&
-      question.previousQuestion !== null &&
-      newPrevious.id === question.previousQuestion.id
-    ) {
+    if (question.previousQuestion.id === previous) {
+      // No change
       return;
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // Disconnect question from previous and next
-      await tx.question.update({
-        where: { id: question.id },
-        data: {
-          previousQuestion: {
-            ...(newPrevious === null
-              ? {
-                  disconnect: true
-                }
-              : {
-                  connect: {
-                    id: newPrevious.id
-                  }
-                })
-          },
-          nextQuestion: {
-            ...(newPrevious === null
-              ? {
-                  connect: { id: firstQuestion.id }
-                }
-              : newPrevious.nextQuestion === null
-              ? {
-                  disconnect: true
-                }
-              : { connect: { id: newPrevious.nextQuestion.id } })
-          }
-        }
-      });
-
+      /**
+       * Disconnect question and reconnect the previous question with the next question
+       */
       if (question.previousQuestion !== null) {
-        if (question.nextQuestion !== null) {
-          await tx.question.update({
-            where: { id: question.previousQuestion.id },
-            data: {
-              nextQuestion: {
-                connect: { id: question.nextQuestion.id }
-              }
+        await this.prisma.question.update({
+          where: { id: question.previousQuestion.id },
+          data: {
+            nextQuestion: {
+              ...(question.nextQuestion !== null
+                ? {
+                    connect: {
+                      id: question.nextQuestion.id
+                    }
+                  }
+                : { disconnect: true })
             }
-          });
-        }
+          }
+        });
       }
 
-      return {};
+      if (previous === null) {
+        /**
+         * Place it as first question if previous is null
+         */
+        const firstQuestion = await this.prisma.question.findFirstOrThrow({
+          where: { section: { id: sectionId }, previousQuestion: null }
+        });
+
+        await this.prisma.question.update({
+          where: { id: questionId },
+          data: {
+            nextQuestion: {
+              connect: firstQuestion
+            }
+          }
+        });
+      } else {
+        /**
+         * Get the new previous and make its next question the current question's next question
+         */
+        const newPrevious = await this.prisma.question.findFirstOrThrow({
+          where: { section: { id: sectionId }, id: previous },
+          include: {
+            nextQuestion: true
+          }
+        });
+
+        await this.prisma.question.update({
+          where: { id: newPrevious.id },
+          data: {
+            nextQuestion: {
+              connect: {
+                id: question.id
+              }
+            }
+          }
+        });
+
+        await this.prisma.question.update({
+          where: { id: question.id },
+          data: {
+            nextQuestion: {
+              ...(newPrevious.nextQuestion !== null
+                ? {
+                    connect: {
+                      id: newPrevious.nextQuestion.id
+                    }
+                  }
+                : { disconnect: true })
+            }
+          }
+        });
+      }
     });
   }
 
