@@ -309,10 +309,10 @@ export class QuestionsService {
         await tx.question.updateMany({
           where: { sectionId, id: questionId },
           data: {
-            ...(title ? { title } : {}),
-            ...(type ? { type } : {}),
+            ...(typeof title === "string" ? { title } : {}),
+            ...(typeof type === "string" ? { type } : {}),
             ...(typeof required === "boolean" ? { required } : {}),
-            ...(hasOther !== undefined ? { hasOther } : {}),
+            ...(typeof hasOther === undefined ? { hasOther } : {}),
             ...(typeof regex === "string" ? { regex } : {})
           }
         });
