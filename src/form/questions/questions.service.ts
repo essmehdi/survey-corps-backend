@@ -206,7 +206,7 @@ export class QuestionsService {
        * Disconnect question and reconnect the previous question with the next question
        */
       if (question.previousQuestion !== null) {
-        await this.prisma.question.update({
+        await tx.question.update({
           where: { id: question.previousQuestion.id },
           data: {
             nextQuestion: {
@@ -226,7 +226,7 @@ export class QuestionsService {
         /**
          * Place it as first question if previous is null
          */
-        const firstQuestion = await this.prisma.question.findFirstOrThrow({
+        const firstQuestion = await tx.question.findFirstOrThrow({
           where: { section: { id: sectionId }, previousQuestion: null }
         });
 
@@ -242,14 +242,14 @@ export class QuestionsService {
         /**
          * Get the new previous and make its next question the current question's next question
          */
-        const newPrevious = await this.prisma.question.findFirstOrThrow({
+        const newPrevious = await tx.question.findFirstOrThrow({
           where: { section: { id: sectionId }, id: previous },
           include: {
             nextQuestion: true
           }
         });
 
-        await this.prisma.question.update({
+        await tx.question.update({
           where: { id: newPrevious.id },
           data: {
             nextQuestion: {
@@ -260,7 +260,7 @@ export class QuestionsService {
           }
         });
 
-        await this.prisma.question.update({
+        await tx.question.update({
           where: { id: question.id },
           data: {
             nextQuestion: {
