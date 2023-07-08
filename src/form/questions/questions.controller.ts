@@ -92,7 +92,7 @@ export class QuestionsController {
   /**
    * Changes the order of a question in a section
    */
-  @Patch(":question")
+  @Patch(":question/reorder")
   async reorderQuestion(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
