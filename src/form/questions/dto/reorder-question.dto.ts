@@ -1,4 +1,4 @@
-import { IsNumber, IsPositive } from "class-validator";
+import { IsNumber, IsOptional, IsPositive } from "class-validator";
 
 export class ReorderQuestionDto {
   /**
@@ -6,5 +6,6 @@ export class ReorderQuestionDto {
    */
   @IsNumber()
   @IsPositive()
-  previous: number;
+  @IsOptional()
+  previous: number | null;
 }
