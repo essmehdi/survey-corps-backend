@@ -195,8 +195,14 @@ export class QuestionsService {
         nextQuestion: true
       }
     });
+    const firstQuestion = await this.prisma.question.findFirst({
+      where: { section: { id: sectionId }, previousQuestion: null }
+    });
+    if (!firstQuestion) {
+      throw new BadRequestException("Empty section");
+    }
 
-    if (question.previousQuestion.id === previous) {
+    if ((question.previousQuestion?.id ?? null) === previous) {
       // No change
       return;
     }
@@ -223,18 +229,13 @@ export class QuestionsService {
       }
 
       if (previous === null) {
-        /**
-         * Place it as first question if previous is null
-         */
-        const firstQuestion = await tx.question.findFirstOrThrow({
-          where: { section: { id: sectionId }, previousQuestion: null }
-        });
-
-        await this.prisma.question.update({
+        await tx.question.update({
           where: { id: questionId },
           data: {
             nextQuestion: {
-              connect: firstQuestion
+              connect: {
+                id: firstQuestion.id
+              }
             }
           }
         });
