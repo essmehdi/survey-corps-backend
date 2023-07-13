@@ -52,7 +52,7 @@ model QuestionSection {
   nextSectionId   Int?             @unique
   conditioned     Condition[]      @relation("NextSection")
   questions       Question[]
-  nextSection     QuestionSection? @relation("SectionSuccession", fields: [nextSectionId], references: [id])
+  nextSection     QuestionSection? @relation("SectionSuccession", fields: [nextSectionId], references: [id], onDelete: SetNull)
   previousSection QuestionSection? @relation("SectionSuccession")
 }
 
