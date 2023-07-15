@@ -46,5 +46,5 @@ export class EditQuestionDto {
   @ValidateIf((o) => o.type === "FREEFIELD")
   @IsString()
   @IsOptional()
-  regex?: string;
+  regex?: string | null;
 }
