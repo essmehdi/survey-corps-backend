@@ -86,7 +86,8 @@ export class FormConfigService {
     });
     const allQuestions = await this.prisma.question.findMany({
       include: {
-        answers: true
+        answers: true,
+        conditions: true
       }
     });
     const allAnswers = await this.prisma.question.findMany();
@@ -118,7 +119,13 @@ export class FormConfigService {
       if (question.type !== "FREEFIELD" && question.answers.length === 0) {
         return {
           valid: false,
-          reason: `Question #${question.id} is of type ${question.type} and must have answers`
+          reason: `Question #${question.id} in section #${question.sectionId} is of type ${question.type} and must have answers`
+        };
+      }
+      if (question.conditions.length !== question.answers.length) {
+        return {
+          valid: false,
+          reason: `Question #${question.id} in section #${question.sectionId} is conditioned but not all answers have target sections`
         };
       }
     }
