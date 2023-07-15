@@ -225,6 +225,13 @@ export class SectionsService {
 
       // Create the conditions
       await this.prisma.$transaction(async (tx) => {
+        await tx.question.update({
+          where: { id: condition.question },
+          data: {
+            required: true
+          }
+        });
+
         await tx.condition.createMany({
           data: Object.entries(condition.answers).map(([answer, section]) => {
             return {
