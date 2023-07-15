@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -286,7 +287,7 @@ export class QuestionsService {
     type?: QuestionType,
     required?: boolean,
     hasOther?: boolean,
-    regex?: string
+    regex?: string | null
   ) {
     try {
       const question = await this.prisma.question.findFirst({
@@ -303,6 +304,19 @@ export class QuestionsService {
         );
       }
 
+      const condition = await this.prisma.condition.findFirst({
+        where: { question: { id: question.id } }
+      });
+
+      // Conditional questions must be required
+      if (condition && required === false) {
+        throw new BadRequestException(
+          "This question is linked to a condition. It must be required"
+        );
+      }
+
+      if (regex === "") regex = null;
+
       return await this.prisma.$transaction(async (tx) => {
         if (question.type === QuestionType.FREEFIELD && hasOther)
           hasOther = false;
@@ -314,7 +328,7 @@ export class QuestionsService {
             ...(typeof type === "string" ? { type } : {}),
             ...(typeof required === "boolean" ? { required } : {}),
             ...(typeof hasOther === undefined ? { hasOther } : {}),
-            ...(typeof regex === "string" ? { regex } : {})
+            ...(regex !== undefined ? { regex } : {})
           }
         });
 
@@ -329,7 +343,11 @@ export class QuestionsService {
         });
       });
     } catch (error) {
-      this.handleQueryException(error);
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        this.handleQueryException(error);
+      }
     }
   }
 
