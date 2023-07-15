@@ -63,7 +63,7 @@ export class ChangeNextSectionDto {
    * Should be specified if type is 'SECTION'
    */
   @ValidateIf((self) => self.type === NextSectionType.SECTION)
-  section?: number;
+  section?: number | null;
 
   /**
    * Should be specified if type is 'CONDITION'

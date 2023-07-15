@@ -163,7 +163,7 @@ export class SectionsService {
    * @param id ID of the target section
    * @param nextSection ID of the next section
    */
-  async setSectionNext(id: number, nextSection: number) {
+  async setSectionNext(id: number, nextSection: number | null) {
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.condition.deleteMany({
@@ -179,9 +179,13 @@ export class SectionsService {
           where: { id },
           data: {
             nextSection: {
-              connect: {
-                id: nextSection
-              }
+              ...(nextSection === null
+                ? { disconnect: true }
+                : {
+                    connect: {
+                      id: nextSection
+                    }
+                  })
             }
           }
         });
