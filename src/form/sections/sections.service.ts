@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
@@ -10,7 +11,7 @@ import {
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConditionDto } from "./dto/change-next-section.dto";
 import { QuestionsService } from "../questions/questions.service";
-import { Prisma, QuestionSection } from "@prisma/client";
+import { Prisma, QuestionSection, QuestionType } from "@prisma/client";
 import { NotFoundError } from "@prisma/client/runtime";
 import { PrismaError } from "prisma-error-enum";
 
@@ -216,6 +217,14 @@ export class SectionsService {
         where: { id: condition.question, section: { id } },
         include: { answers: true, section: true }
       });
+
+      // Check if question is single choice
+      if (question.type !== QuestionType.SINGLE_CHOICE) {
+        throw new BadRequestException(
+          "The question provided is not a single choice question"
+        );
+      }
+
       const answersIds = question.answers.map((a) => a.id);
       if (
         !Object.keys(condition.answers).every((answer) =>
