@@ -64,24 +64,33 @@ export class SectionsService {
    * Gets all registered sections in the database without their questions
    */
   async allSections() {
-    return await this.prisma.questionSection.findMany({});
+    return await this.prisma.questionSection.findMany({
+      orderBy: {
+        id: "asc"
+      }
+    });
   }
 
   /**
    * Gets all registered sections in the database with their questions in order
    */
   async allSectionsWithOrderedQuestions() {
-    const sections = await this.prisma.questionSection.findMany({});
+    const sections = await this.prisma.questionSection.findMany({
+      orderBy: {
+        id: "asc"
+      }
+    });
     const result = await Promise.all(
       sections.map(async (section) => {
-        delete section["nextSectionId"];
-        return {
+        const finalSection = {
           ...section,
           questions: await this.questions.getQuestionsBySectionInOrder(
             section.id
           ),
           next: await this.getSectionNext(section)
         };
+        delete finalSection["nextSectionId"];
+        return finalSection;
       })
     );
     return result;
@@ -162,16 +171,29 @@ export class SectionsService {
   /**
    * Sets the next section directly to another section
    * @param id ID of the target section
-   * @param nextSection ID of the next section
+   * @param nextSectionId ID of the next section
    */
-  async setSectionNext(id: number, nextSection: number | null) {
+  async setSectionNext(id: number, nextSectionId: number | null) {
+    const section = await this.prisma.questionSection.findUniqueOrThrow({
+      where: { id }
+    });
+
+    if (nextSectionId) {
+      const nextSection = await this.prisma.questionSection.findUniqueOrThrow({
+        where: { id: nextSectionId }
+      });
+
+      if (nextSection.id === section.id) {
+        throw new ConflictException("You cannot point to the section itself");
+      }
+    }
+
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.condition.deleteMany({
           where: {
             question: {
-              section: { id },
-              conditions: { some: {} }
+              section: { id }
             }
           }
         });
@@ -180,11 +202,11 @@ export class SectionsService {
           where: { id },
           data: {
             nextSection: {
-              ...(nextSection === null
+              ...(nextSectionId === null
                 ? { disconnect: true }
                 : {
                     connect: {
-                      id: nextSection
+                      id: nextSectionId
                     }
                   })
             }
@@ -225,11 +247,17 @@ export class SectionsService {
         );
       }
 
+      // Check if answers are correct
       const answersIds = question.answers.map((a) => a.id);
       if (
-        !Object.keys(condition.answers).every((answer) =>
-          answersIds.includes(+answer)
-        )
+        !Object.keys(condition.answers).every((answer) => {
+          // Check if any answer does point to the same question section
+          if (condition.answers[answer] === question.section.id)
+            throw new ConflictException(
+              "You cannot point on the section itself"
+            );
+          return answersIds.includes(+answer);
+        })
       ) {
         throw new NotFoundException(
           "The answers provided could not be found in the question provided"
@@ -260,7 +288,7 @@ export class SectionsService {
             where: { id },
             data: {
               nextSection: {
-                delete: true
+                disconnect: true
               }
             }
           });
