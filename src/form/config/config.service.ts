@@ -63,7 +63,10 @@ export class FormConfigService {
         where: { key: "published" },
         data: { value: publish ? "true" : "false" }
       });
-      if (!publish) await tx.submission.deleteMany();
+      if (!publish) {
+        await tx.submission.deleteMany();
+        await tx.token.deleteMany();
+      }
       this.notifier.addEvent("formConfigChange", await this.getAllConfig());
     });
   }
