@@ -11,6 +11,7 @@ import { SessionController } from "./session/session.controller";
 import { TokensModule } from "src/tokens/tokens.module";
 import { FormConfigService } from "./config/config.service";
 import { NotifierModule } from "src/notifier/notifier.module";
+import { FormConfigController } from "./config/config.controller";
 
 @Module({
   providers: [
@@ -25,7 +26,8 @@ import { NotifierModule } from "src/notifier/notifier.module";
     SectionsController,
     AnswersController,
     SubmissionsController,
-    SessionController
+    SessionController,
+    FormConfigController
   ],
   imports: [TokensModule, NotifierModule]
 })
