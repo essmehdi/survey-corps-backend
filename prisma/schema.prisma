@@ -9,8 +9,8 @@ datasource db {
 }
 
 model FormConfig {
-  id        Int     @id @default(autoincrement())
-  key       String  @unique
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
   value     String
   createdAt DateTime @default(now())
 }
@@ -39,21 +39,21 @@ model Condition {
   questionId    Int
   answerId      Int             @unique
   nextSectionId Int
-  answer        Answer          @relation(fields: [answerId], references: [id])
-  nextSection   QuestionSection @relation("NextSection", fields: [nextSectionId], references: [id])
-  question      Question        @relation(fields: [questionId], references: [id])
+  answer        Answer          @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  nextSection   QuestionSection @relation("NextSection", fields: [nextSectionId], references: [id], onDelete: Cascade)
+  question      Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, answerId])
 }
 
 model QuestionSection {
-  id              Int              @id @default(autoincrement())
-  title           String
-  nextSectionId   Int?             @unique
-  conditioned     Condition[]      @relation("NextSection")
-  questions       Question[]
-  nextSection     QuestionSection? @relation("SectionSuccession", fields: [nextSectionId], references: [id], onDelete: SetNull)
-  previousSection QuestionSection? @relation("SectionSuccession")
+  id               Int               @id @default(autoincrement())
+  title            String
+  nextSectionId    Int?
+  conditioned      Condition[]       @relation("NextSection")
+  questions        Question[]
+  nextSection      QuestionSection?  @relation("SectionSuccession", fields: [nextSectionId], references: [id], onDelete: SetNull)
+  previousSections QuestionSection[] @relation("SectionSuccession")
 }
 
 model Question {
