@@ -43,8 +43,8 @@ export class UsersController {
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
   async me(@Request() request: RequestWithUser) {
-    const { id, fullname, email, privilege } = request.user;
-    return { id, fullname, email, privilege };
+    const { id, fullname, email, privilege, isActive } = request.user;
+    return { id, fullname, email, privilege, isActive };
   }
 
   /**
@@ -126,6 +126,18 @@ export class UsersController {
     await this.users.disableUser(id);
     return {
       message: "User account disabled successfully"
+    };
+  }
+
+  /**
+   * Enables user account
+   */
+  @Post(":id/enable")
+  @UseGuards(AdminGuard)
+  async enableUser(@Param("id", ParseIntPipe) id: number) {
+    await this.users.enableUser(id);
+    return {
+      message: "User account enabled successfully"
     };
   }
 

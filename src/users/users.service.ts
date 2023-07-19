@@ -341,4 +341,21 @@ export class UsersService {
       this.handleQueryException(error);
     }
   }
+
+  /**
+   * Enables user account
+   * @param userId User's id
+   */
+  async enableUser(userId: number) {
+    try {
+      await this.xprisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: true
+        }
+      });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
 }
