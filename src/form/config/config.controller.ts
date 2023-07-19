@@ -1,15 +1,11 @@
 import { Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { FormConfigService } from "./config.service";
-import { NotifierGateway } from "../../notifier/notifier.gateway";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 
 @Controller("admin/config")
 @UseGuards(AdminGuard)
-export class ConfigController {
-  constructor(
-    private config: FormConfigService,
-    private notifier: NotifierGateway
-  ) {}
+export class FormConfigController {
+  constructor(private config: FormConfigService) {}
 
   @Post("publish")
   async publishForm() {
@@ -24,6 +20,16 @@ export class ConfigController {
     await this.config.changeFormPublishState(false);
     return {
       message: "Form unpublished"
+    };
+  }
+
+  @Post("toggle-publish")
+  async togglePublishForm() {
+    await this.config.changeFormPublishState(
+      !(await this.config.isFormPublished())
+    );
+    return {
+      message: "Toggled form state successfully"
     };
   }
 
