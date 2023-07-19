@@ -58,11 +58,14 @@ export class FormConfigService {
       }
     }
 
-    await this.prisma.formConfig.update({
-      where: { key: "published" },
-      data: { value: publish ? "true" : "false" }
+    await this.prisma.$transaction(async (tx) => {
+      await this.prisma.formConfig.update({
+        where: { key: "published" },
+        data: { value: publish ? "true" : "false" }
+      });
+      if (!publish) await tx.submission.deleteMany();
+      this.notifier.addEvent("formConfigChange", await this.getAllConfig());
     });
-    this.notifier.addEvent("formConfigChange", await this.getAllConfig());
   }
 
   /**
@@ -81,48 +84,50 @@ export class FormConfigService {
    * Validate the form to detect inconsistencies before publishing the form
    */
   private async validateFormBeforePublish() {
+    // Validate sections
     const allSections = await this.prisma.questionSection.findMany({
-      include: { nextSection: true }
+      include: { questions: true }
     });
+    if (allSections.length === 0) {
+      throw new BadRequestException("Form is empty");
+    }
+    const emptySection = allSections.find(
+      (section) => section.questions.length === 0
+    );
+    if (emptySection) {
+      throw new BadRequestException(`Section #${emptySection.id} is empty`);
+    }
+
+    const section = await this.prisma.questionSection.findFirst({
+      where: {
+        AND: [
+          { nextSectionId: null },
+          { questions: { some: { conditions: { none: {} } } } }
+        ]
+      }
+    });
+    if (!section) {
+      throw new BadRequestException("There is no exiting section");
+    }
+
+    // Validate questions
     const allQuestions = await this.prisma.question.findMany({
       include: {
         answers: true,
         conditions: true
       }
     });
-    const allAnswers = await this.prisma.question.findMany();
-
-    // Validate sections
-    for (const section of allSections) {
-      if (!section.nextSection) {
-        const condition = await this.prisma.condition.findFirst({
-          where: {
-            question: {
-              section: {
-                id: section.id
-              }
-            }
-          }
-        });
-
-        if (!condition) {
-          return {
-            valid: false,
-            reason: `Section #${section.id} has no direct successor or a conditioned succession`
-          };
-        }
-      }
-    }
-
-    // Validate questions
     for (const question of allQuestions) {
       if (question.type !== "FREEFIELD" && question.answers.length === 0) {
         return {
           valid: false,
-          reason: `Question #${question.id} in section #${question.sectionId} is of type ${question.type} and must have answers`
+          reason: `Question #${question.id} in section #${question.sectionId} is a choice question and must have answers`
         };
       }
-      if (question.conditions.length !== question.answers.length) {
+      if (
+        question.conditions.length > 0 &&
+        question.conditions.length !== question.answers.length
+      ) {
         return {
           valid: false,
           reason: `Question #${question.id} in section #${question.sectionId} is conditioned but not all answers have target sections`
