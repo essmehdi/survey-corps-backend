@@ -134,7 +134,7 @@ export class SubmissionsService {
           const section = await this.prisma.questionSection.findUnique({
             where: { id: answer.sectionId },
             include: {
-              previousSection: true,
+              previousSections: true,
               nextSection: true,
               conditioned: true
             }
@@ -149,7 +149,8 @@ export class SubmissionsService {
           // Check if the section is the first element of the submission matches with the database
           if (
             !currentSection &&
-            (section.previousSection || section.conditioned.length > 0)
+            (section.previousSections.length > 0 ||
+              section.conditioned.length > 0)
           )
             throw new BadRequestException(
               `Section #${answer.sectionId} is not the first`
