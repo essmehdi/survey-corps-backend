@@ -111,7 +111,7 @@ export class SectionsService {
   async firstSection() {
     try {
       const firstSection = await this.prisma.questionSection.findFirstOrThrow({
-        where: { previousSection: null, conditioned: { none: {} } }
+        where: { previousSections: { none: {} }, conditioned: { none: {} } }
       });
       return this.section(firstSection.id);
     } catch (error) {

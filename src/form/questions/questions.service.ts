@@ -152,14 +152,12 @@ export class QuestionsService {
   }
 
   async getQuestionsBySectionInOrder(sectionId: number) {
-    try {
-      var firstQuestion = await this.prisma.question.findFirstOrThrow({
-        where: { section: { id: sectionId }, previousQuestion: null },
-        select: QuestionsService.QUESTION_PROJECTION
-      });
-      Logger.debug(firstQuestion.title);
-    } catch (error) {
-      this.handleQueryException(error);
+    var firstQuestion = await this.prisma.question.findFirst({
+      where: { section: { id: sectionId }, previousQuestion: null },
+      select: QuestionsService.QUESTION_PROJECTION
+    });
+    if (!firstQuestion) {
+      return [];
     }
     const results = [firstQuestion];
     let question = firstQuestion;
@@ -327,7 +325,7 @@ export class QuestionsService {
             ...(typeof title === "string" ? { title } : {}),
             ...(typeof type === "string" ? { type } : {}),
             ...(typeof required === "boolean" ? { required } : {}),
-            ...(typeof hasOther === undefined ? { hasOther } : {}),
+            ...(typeof hasOther === "boolean" ? { hasOther } : {}),
             ...(regex !== undefined ? { regex } : {})
           }
         });
