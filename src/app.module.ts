@@ -14,6 +14,7 @@ import { MailModule } from "./mail/mail.module";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { join } from "path";
 import { NotifierModule } from "./notifier/notifier.module";
+import { StatsModule } from "./stats/stats.module";
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { NotifierModule } from "./notifier/notifier.module";
     ApplicationModule,
     TokensModule,
     MailModule,
-    NotifierModule
+    NotifierModule,
+    StatsModule
   ],
   controllers: [AppController],
   providers: [AppService, UsersService]
