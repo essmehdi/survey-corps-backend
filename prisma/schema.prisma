@@ -108,12 +108,13 @@ model Token {
 }
 
 model Application {
-  id       Int               @id @default(autoincrement())
-  fullname String
-  email    String            @unique
-  status   ApplicationStatus @default(PENDING)
-  tokenId  Int?              @unique
-  token    Token?            @relation(fields: [tokenId], references: [id])
+  id        Int               @id @default(autoincrement())
+  fullname  String
+  email     String            @unique
+  createdAt DateTime          @default(now())
+  status    ApplicationStatus @default(PENDING)
+  tokenId   Int?              @unique
+  token     Token?            @relation(fields: [tokenId], references: [id])
 }
 
 model session {
