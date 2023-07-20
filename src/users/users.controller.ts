@@ -22,6 +22,7 @@ import { RegisterUserDto } from "./dto/register-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersQueryDto } from "./dto/users-query.dto";
 import { UsersService } from "./users.service";
+import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
 
 @ApiTags("Users")
 @Controller("users")
@@ -66,9 +67,11 @@ export class UsersController {
    */
   @Get("leaderboard")
   @UseGuards(CookieAuthenticationGuard)
-  async leaderboard() {
-    Logger.debug("Getting leaderboard...");
-    return await this.users.getLeaderboard();
+  async leaderboard(@Query() paginatedQuery: PaginationQueryDto) {
+    return await this.users.getLeaderboard(
+      paginatedQuery.page,
+      paginatedQuery.limit
+    );
   }
 
   /**

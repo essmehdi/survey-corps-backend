@@ -169,32 +169,37 @@ export class UsersService {
     }
   }
 
-  async getLeaderboard() {
-    return (
-      await this.xprisma.user.findMany({
-        where: {
-          tokens: {
-            some: {}
-          }
-        },
-        select: {
-          ...UsersService.PUBLIC_PROJECTION,
-          _count: {
-            select: {
-              tokens: {
-                where: {
-                  submitted: true
-                }
+  async getLeaderboard(page: number = 1, limit: number = 30) {
+    const [leaderboard, count] = await this.getUsersAndCount({
+      where: {
+        tokens: {
+          some: {}
+        }
+      },
+      select: {
+        ...UsersService.PUBLIC_PROJECTION,
+        _count: {
+          select: {
+            tokens: {
+              where: {
+                submitted: true
               }
             }
           }
         }
-      })
-    ).map(({ fullname, email, _count }) => ({
-      fullname,
-      email,
-      count: _count.tokens
-    }));
+      }
+    });
+
+    return paginatedResponse(
+      leaderboard.map(({ fullname, email, _count }) => ({
+        fullname,
+        email,
+        count: _count.tokens
+      })),
+      page,
+      limit,
+      count
+    );
   }
 
   async createUser(
