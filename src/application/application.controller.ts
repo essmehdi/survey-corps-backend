@@ -39,10 +39,8 @@ export class ApplicationController {
   @Get("admin/applications")
   @UseGuards(AdminGuard)
   async getAllApplications(@Query() getApplicationsDto: ApplicationsQueryDto) {
-    const { status } = getApplicationsDto;
-    if (status === StatusOptions.PENDING)
-      return await this.applications.getAllPendingApplications();
-    return await this.applications.getAllRespondedApplications();
+    const { status, page, limit } = getApplicationsDto;
+    return await this.applications.getApplications(status, page, limit);
   }
 
   /**
@@ -64,13 +62,10 @@ export class ApplicationController {
   async acceptApplication(
     @Param("application", ParseIntPipe) applicationId: number
   ) {
-    await this.applications.respondToApplication(
+    return await this.applications.respondToApplication(
       applicationId,
       ApplicationStatus.GRANTED
     );
-    return {
-      message: "The application has been successfully accepted"
-    };
   }
 
   /**
@@ -81,12 +76,9 @@ export class ApplicationController {
   async rejectApplication(
     @Param("application", ParseIntPipe) applicationId: number
   ) {
-    await this.applications.respondToApplication(
+    return await this.applications.respondToApplication(
       applicationId,
       ApplicationStatus.REJECTED
     );
-    return {
-      message: "The application has been successfully rejected"
-    };
   }
 }
