@@ -20,8 +20,6 @@ export class EditInterceptor implements NestInterceptor {
         const request = context.switchToHttp().getRequest() as RequestWithUser;
         const response = context.switchToHttp().getResponse();
 
-        this.logger.debug(request.user);
-
         if (
           context.getType() === "http" &&
           ["POST", "PATCH", "DELETE"].includes(request.method) &&

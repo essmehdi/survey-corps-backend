@@ -89,7 +89,6 @@ export class QuestionsService {
             .findUniqueOrThrow({ where: { id: sectionId } })
             .questions()
         ).length === 0;
-      Logger.debug(emptySection);
       if (emptySection && previous !== null) {
         // Trying to add to a previous section in an empty section
         throw new NotFoundException(
@@ -124,7 +123,6 @@ export class QuestionsService {
         const firstQuestion = await this.prisma.question.findFirstOrThrow({
           where: { section: { id: sectionId }, previousQuestion: null }
         });
-        Logger.debug(firstQuestion);
         return await this.prisma.question.create({
           data: {
             ...questionData,
