@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -61,12 +62,13 @@ export class UsersController {
   }
 
   /**
-   * Resends registration link to unregistered user
+   * Gets users leaderboard
    */
-  @Post(":id/resend")
-  @UseGuards(AdminGuard)
-  async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
-    return await this.users.resendRegistrationLink(id);
+  @Get("leaderboard")
+  @UseGuards(CookieAuthenticationGuard)
+  async leaderboard() {
+    Logger.debug("Getting leaderboard...");
+    return await this.users.getLeaderboard();
   }
 
   /**
@@ -90,6 +92,15 @@ export class UsersController {
     return {
       message: "Password updated successfully"
     };
+  }
+
+  /**
+   * Resends registration link to unregistered user
+   */
+  @Post(":id/resend")
+  @UseGuards(AdminGuard)
+  async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
+    return await this.users.resendRegistrationLink(id);
   }
 
   /**
@@ -139,13 +150,5 @@ export class UsersController {
     return {
       message: "User account enabled successfully"
     };
-  }
-
-  /**
-   * Gets users leaderboard
-   */
-  @Get("leaderboard")
-  async leaderboard() {
-    return this.users.getLeaderboard();
   }
 }
