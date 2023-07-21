@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -114,10 +115,17 @@ export class UsersController {
    */
   @Post("reset-password")
   async sendPasswordResetLink(
+    @Req() request: RequestWithUser,
     @Body() resetPasswordDto: ResetPasswordRequestDto
   ) {
     const { email } = resetPasswordDto;
-    await this.users.sendPasswordResetLink(email);
+    if (email) {
+      await this.users.sendPasswordResetLink(email);
+    } else if (request.isAuthenticated()) {
+      await this.users.sendPasswordResetLink(request.user.email);
+    } else {
+      throw new BadRequestException("Email is required");
+    }
     return {
       message: "Password reset link sent successfully"
     };
