@@ -332,6 +332,37 @@ export class UsersService {
   }
 
   /**
+   * Verify password reset token
+   */
+  async verifyForgotPasswordToken(token: string) {
+    try {
+      const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
+        where: { token }
+      });
+      // Check if it's not expired
+      if (!this.checkForgotPasswordTokenValidity(t.createdAt)) {
+        return {
+          valid: false,
+          expired: true
+        };
+      }
+      return {
+        valid: true
+      };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordsNotFound
+      ) {
+        return {
+          valid: false
+        };
+      }
+      this.handleQueryException(error);
+    }
+  }
+
+  /**
    * Send a password reset link to the user
    */
   async sendPasswordResetLink(email: string) {
@@ -362,15 +393,12 @@ export class UsersService {
   /**
    * Reset user password using password reset token
    */
-  async resetUserPassword(user: User, token: string, password: string) {
+  async resetUserPassword(token: string, password: string) {
     try {
       const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
         where: { token },
         include: { user: true }
       });
-      if (t.user.id !== user.id) {
-        throw new ForbiddenException("Invalid token");
-      }
       if (
         new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
         UsersService.PASSWORD_RESET_TOKEN_LIFESPAN

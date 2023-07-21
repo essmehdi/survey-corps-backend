@@ -132,16 +132,25 @@ export class UsersController {
   }
 
   /**
+   * Verify password reset token
+   */
+  @Get("reset-password/:token")
+  async verifyForgotPasswordToken(
+    @Param("token", ParseUUIDPipe) token: string
+  ) {
+    return await this.users.verifyForgotPasswordToken(token);
+  }
+
+  /**
    * Change password for user
    */
   @Post("reset-password/:token")
   async resetPassword(
-    @Req() request: RequestWithUser,
     @Param("token", ParseUUIDPipe) token: string,
     @Body() resetPasswordDto: ResetPasswordDto
   ) {
     const { password } = resetPasswordDto;
-    await this.users.resetUserPassword(request.user, token, password);
+    await this.users.resetUserPassword(token, password);
     return {
       message: "Password updated successfully"
     };
