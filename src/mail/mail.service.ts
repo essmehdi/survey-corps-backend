@@ -18,40 +18,54 @@ export class MailService {
     token: string
   ) {
     const formLink = this.config.get("FRONTEND_URL") + "/form/" + token;
-    const source = readFileSync(
-      join(__dirname, "templates", "applicarion-approved.html")
-    ).toString();
-    const template = Handlebars.compile(source);
-    const html = template({ url: formLink, fullname });
 
-    const takeoutClient = new TakeoutClient();
-    takeoutClient.login(this.config.get("TAKEOUT_TOKEN"));
-    const response = await takeoutClient.send({
-      to: email,
-      from: "ENSIAS Bridge",
-      subject: "Survey form application approved",
-      html
+    const html = this.getPopulatedTemplate("application-approved.html", {
+      url: formLink,
+      fullname
     });
-    this.logger.log("Registration email sent: " + response.id);
+
+    this.sendTakeoutEmail(email, "Survey form application approved", html);
   }
 
   async sendRegistrationEmail(email: string, fullname: string, token: string) {
     const registrationLink =
       this.config.get("FRONTEND_URL") + "/register/" + token;
+
+    const html = this.getPopulatedTemplate("registration.html", {
+      url: registrationLink,
+      fullname
+    });
+
+    this.sendTakeoutEmail(email, "Registration link", html);
+  }
+
+  private getPopulatedTemplate(
+    templateName: string,
+    context: Record<string, any>
+  ): string {
     const source = readFileSync(
-      join(__dirname, "templates", "registration.html")
+      join(__dirname, "templates", templateName)
     ).toString();
     const template = Handlebars.compile(source);
-    const html = template({ url: registrationLink, fullname });
 
+    return template(context);
+  }
+
+  /**
+   * Sends email using Takeout API
+   * @param email Recipient email
+   * @param subject Email subject
+   * @param html Email HTML body
+   */
+  private async sendTakeoutEmail(email: string, subject: string, html: string) {
     const takeoutClient = new TakeoutClient();
     takeoutClient.login(this.config.get("TAKEOUT_TOKEN"));
     const response = await takeoutClient.send({
       to: email,
       from: "ENSIAS Bridge",
-      subject: "Registration link",
+      subject,
       html
     });
-    this.logger.log("Registration email sent: " + response.id);
+    this.logger.log("Takeout email sent: " + response.id);
   }
 }
