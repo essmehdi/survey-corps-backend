@@ -59,7 +59,10 @@ export class MailService {
     ).toString();
     const template = Handlebars.compile(source);
 
-    return template(context);
+    return template({
+      ...context,
+      bridgeImageUrl: this.config.get("API_URL") + "/bridge-email.png"
+    });
   }
 
   /**
