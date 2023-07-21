@@ -335,12 +335,20 @@ export class UsersService {
    * Send a password reset link to the user
    */
   async sendPasswordResetLink(email: string) {
-    await this.xprisma.$transaction(async (tx) => {
+    const presentToken = await this.prisma.forgotPasswordToken.findFirst({
+      where: { user: { email } }
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      if (presentToken) {
+        await tx.forgotPasswordToken.delete({ where: { id: presentToken.id } });
+      }
+
       const token = randomUUID();
       const user = await tx.user.update({
         where: { email },
         data: {
-          passwordResetToken: {
+          forgotPasswordToken: {
             create: {
               token
             }
@@ -356,7 +364,7 @@ export class UsersService {
    */
   async resetUserPassword(user: User, token: string, password: string) {
     try {
-      const t = await this.xprisma.passwordResetToken.findUniqueOrThrow({
+      const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
         where: { token },
         include: { user: true }
       });
@@ -369,11 +377,11 @@ export class UsersService {
       ) {
         throw new ForbiddenException("Expired token");
       }
-      await this.xprisma.user.update({
+      await this.prisma.user.update({
         where: { id: t.user.id },
         data: {
           password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
-          passwordResetToken: {
+          forgotPasswordToken: {
             delete: true
           }
         }
@@ -387,6 +395,13 @@ export class UsersService {
       }
       this.handleQueryException(error);
     }
+  }
+
+  private async checkForgotPasswordTokenValidity(createdAt: Date) {
+    return (
+      new Date().getMilliseconds() - createdAt.getMilliseconds() <
+      UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
+    );
   }
 
   /**
