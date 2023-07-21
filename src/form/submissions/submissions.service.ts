@@ -131,7 +131,7 @@ export class SubmissionsService {
             !nextQuestionId &&
             nextSectionId === answer.sectionId)
         ) {
-          const section = await this.prisma.questionSection.findUnique({
+          const section = await tx.questionSection.findUnique({
             where: { id: answer.sectionId },
             include: {
               previousSections: true,
@@ -162,7 +162,7 @@ export class SubmissionsService {
         }
 
         // Get the current question
-        const question = await this.prisma.question.findFirst({
+        const question = await tx.question.findFirst({
           where: { id: answer.questionId, sectionId: answer.sectionId },
           include: { nextQuestion: true, conditions: true }
         });
@@ -185,7 +185,7 @@ export class SubmissionsService {
           // Validate answers
           if (question.type !== QuestionType.FREEFIELD) {
             const answers = (
-              await this.prisma.answer.findMany({
+              await tx.answer.findMany({
                 where: { question: { id: question.id } },
                 select: { id: true }
               })
