@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Request,
   UseGuards
 } from "@nestjs/common";
@@ -23,6 +24,8 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersQueryDto } from "./dto/users-query.dto";
 import { UsersService } from "./users.service";
 import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
+import { ResetPasswordRequestDto } from "./dto/reset-password-request.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 
 @ApiTags("Users")
 @Controller("users")
@@ -104,6 +107,36 @@ export class UsersController {
   @UseGuards(AdminGuard)
   async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
     return await this.users.resendRegistrationLink(id);
+  }
+
+  /**
+   * Sends a password reset link to user
+   */
+  @Post("reset-password")
+  async sendPasswordResetLink(
+    @Body() resetPasswordDto: ResetPasswordRequestDto
+  ) {
+    const { email } = resetPasswordDto;
+    await this.users.sendPasswordResetLink(email);
+    return {
+      message: "Password reset link sent successfully"
+    };
+  }
+
+  /**
+   * Change password for user
+   */
+  @Post("reset-password/:token")
+  async resetPassword(
+    @Req() request: RequestWithUser,
+    @Param("token", ParseUUIDPipe) token: string,
+    @Body() resetPasswordDto: ResetPasswordDto
+  ) {
+    const { password } = resetPasswordDto;
+    await this.users.resetUserPassword(request.user, token, password);
+    return {
+      message: "Password updated successfully"
+    };
   }
 
   /**

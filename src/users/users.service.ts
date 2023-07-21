@@ -7,7 +7,7 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { Prisma, PrismaClient, Privilege } from "@prisma/client";
+import { Prisma, PrismaClient, Privilege, User } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaError } from "prisma-error-enum";
@@ -24,6 +24,7 @@ export class UsersService {
   private xprisma: any;
   private readonly logger = new Logger(UsersService.name);
   private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
+  private static readonly PASSWORD_RESET_TOKEN_LIFESPAN = 86400000; // 1 days
   private static PUBLIC_PROJECTION = {
     id: true,
     fullname: true,
@@ -326,6 +327,64 @@ export class UsersService {
         newToken
       );
     } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
+
+  /**
+   * Send a password reset link to the user
+   */
+  async sendPasswordResetLink(email: string) {
+    await this.xprisma.$transaction(async (tx) => {
+      const token = randomUUID();
+      const user = await tx.user.update({
+        where: { email },
+        data: {
+          passwordResetToken: {
+            create: {
+              token
+            }
+          }
+        }
+      });
+      await this.mail.sendPasswordResetEmail(user.email, user.fullname, token);
+    });
+  }
+
+  /**
+   * Reset user password using password reset token
+   */
+  async resetUserPassword(user: User, token: string, password: string) {
+    try {
+      const t = await this.xprisma.passwordResetToken.findUniqueOrThrow({
+        where: { token },
+        include: { user: true }
+      });
+      if (t.user.id !== user.id) {
+        throw new ForbiddenException("Invalid token");
+      }
+      if (
+        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
+      ) {
+        throw new ForbiddenException("Expired token");
+      }
+      await this.xprisma.user.update({
+        where: { id: t.user.id },
+        data: {
+          password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
+          passwordResetToken: {
+            delete: true
+          }
+        }
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordsNotFound
+      ) {
+        throw new ForbiddenException("Invalid token");
+      }
       this.handleQueryException(error);
     }
   }

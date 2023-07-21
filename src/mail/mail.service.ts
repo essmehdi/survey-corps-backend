@@ -39,6 +39,17 @@ export class MailService {
     this.sendTakeoutEmail(email, "Registration link", html);
   }
 
+  async sendPasswordResetEmail(email: string, fullname: string, token: string) {
+    const resetLink = this.config.get("FRONTEND_URL") + "/reset/" + token;
+
+    const html = this.getPopulatedTemplate("password-reset.html", {
+      url: resetLink,
+      fullname
+    });
+
+    this.sendTakeoutEmail(email, "Password reset link", html);
+  }
+
   private getPopulatedTemplate(
     templateName: string,
     context: Record<string, any>
