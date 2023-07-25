@@ -33,7 +33,8 @@ model ForgotPasswordToken {
 
 model User {
   id                  Int                  @id @default(autoincrement())
-  fullname            String
+  firstname           String
+  lastname            String
   email               String               @unique
   password            String?
   privilege           Privilege            @default(MEMBER)
