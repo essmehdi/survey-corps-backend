@@ -4,19 +4,25 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { AddAnswerDto } from "./dto/add-answer.dto";
 import { AnswersService } from "./answers.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApiTags } from "@nestjs/swagger";
 import { EditAnswerDto } from "./dto/edit-answer.dto";
+import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
+import { EditInterceptor } from "../interceptors/edit.interceptor";
 
 @ApiTags("Admin form", "Answers")
 @Controller("admin/sections/:section/questions/:question/answers")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
+@UseInterceptors(EditInterceptor)
 export class AnswersController {
   constructor(private answers: AnswersService) {}
 
@@ -25,8 +31,8 @@ export class AnswersController {
    */
   @Get("")
   async getAnswers(
-    @Param("section") section: number,
-    @Param("question") question: number
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number
   ) {
     return await this.answers.getAnswers(section, question);
   }
@@ -36,9 +42,9 @@ export class AnswersController {
    */
   @Get(":answer")
   async getAnswer(
-    @Param("section") section: number,
-    @Param("question") question: number,
-    @Param("answer") answer: number
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
+    @Param("answer", ParseIntPipe) answer: number
   ) {
     return await this.answers.getAnswer(section, question, answer);
   }
@@ -48,8 +54,8 @@ export class AnswersController {
    */
   @Post()
   async addAnswer(
-    @Param("section") section: number,
-    @Param("question") question: number,
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
     @Body() addAnswerDto: AddAnswerDto
   ) {
     const answer = await this.answers.addAnswer(
@@ -68,9 +74,9 @@ export class AnswersController {
    */
   @Patch(":answer")
   async editAnswer(
-    @Param("section") section: number,
-    @Param("question") question: number,
-    @Param("answer") answer: number,
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
+    @Param("answer", ParseIntPipe) answer: number,
     @Body() editAnswerDto: EditAnswerDto
   ) {
     const { title } = editAnswerDto;
@@ -82,9 +88,9 @@ export class AnswersController {
    */
   @Delete(":answer")
   async deleteAnswer(
-    @Param("section") section: number,
-    @Param("question") question: number,
-    @Param("answer") answer: number
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
+    @Param("answer", ParseIntPipe) answer: number
   ) {
     await this.answers.deleteAnswer(section, question, answer);
     return {

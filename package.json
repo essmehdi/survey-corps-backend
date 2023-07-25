@@ -27,8 +27,10 @@
     "@nestjs/core": "^9.0.0",
     "@nestjs/passport": "^9.0.0",
     "@nestjs/platform-express": "^9.0.0",
+    "@nestjs/platform-socket.io": "^9.4.3",
     "@nestjs/serve-static": "^3.0.1",
     "@nestjs/swagger": "^6.2.1",
+    "@nestjs/websockets": "^9.4.3",
     "@prisma/client": "^4.9.0",
     "@types/express-session": "^1.17.5",
     "bcrypt": "^5.1.0",
@@ -44,6 +46,7 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",
+    "socket.io": "^4.6.2",
     "takeout.js": "^1.3.1"
   },
   "devDependencies": {

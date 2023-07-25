@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -88,7 +89,6 @@ export class QuestionsService {
             .findUniqueOrThrow({ where: { id: sectionId } })
             .questions()
         ).length === 0;
-      Logger.debug(emptySection);
       if (emptySection && previous !== null) {
         // Trying to add to a previous section in an empty section
         throw new NotFoundException(
@@ -123,7 +123,6 @@ export class QuestionsService {
         const firstQuestion = await this.prisma.question.findFirstOrThrow({
           where: { section: { id: sectionId }, previousQuestion: null }
         });
-        Logger.debug(firstQuestion);
         return await this.prisma.question.create({
           data: {
             ...questionData,
@@ -151,14 +150,12 @@ export class QuestionsService {
   }
 
   async getQuestionsBySectionInOrder(sectionId: number) {
-    try {
-      var firstQuestion = await this.prisma.question.findFirstOrThrow({
-        where: { section: { id: sectionId }, previousQuestion: null },
-        select: QuestionsService.QUESTION_PROJECTION
-      });
-      Logger.debug(firstQuestion.title);
-    } catch (error) {
-      this.handleQueryException(error);
+    var firstQuestion = await this.prisma.question.findFirst({
+      where: { section: { id: sectionId }, previousQuestion: null },
+      select: QuestionsService.QUESTION_PROJECTION
+    });
+    if (!firstQuestion) {
+      return [];
     }
     const results = [firstQuestion];
     let question = firstQuestion;
@@ -183,20 +180,11 @@ export class QuestionsService {
     }
   }
 
-  // TODO: Complete the reordering logic
   async reorderQuestion(
     sectionId: number,
     questionId: number,
     previous: number
   ) {
-    const firstQuestion = await this.prisma.question.findFirst({
-      where: { section: { id: sectionId }, previousQuestion: null }
-    });
-
-    if (!firstQuestion) {
-      throw new BadRequestException("No question to reorder: empty section");
-    }
-
     const question = await this.prisma.question.findFirstOrThrow({
       where: { section: { id: sectionId }, id: questionId },
       include: {
@@ -204,68 +192,87 @@ export class QuestionsService {
         nextQuestion: true
       }
     });
+    const firstQuestion = await this.prisma.question.findFirst({
+      where: { section: { id: sectionId }, previousQuestion: null }
+    });
+    if (!firstQuestion) {
+      throw new BadRequestException("Empty section");
+    }
 
-    const newPrevious = previous
-      ? await this.prisma.question.findFirstOrThrow({
-          where: { section: { id: sectionId }, id: previous },
-          include: {
-            nextQuestion: true
-          }
-        })
-      : null;
-
-    if (
-      newPrevious !== null &&
-      question.previousQuestion !== null &&
-      newPrevious.id === question.previousQuestion.id
-    ) {
+    if ((question.previousQuestion?.id ?? null) === previous) {
+      // No change
       return;
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // Disconnect question from previous and next
-      await tx.question.update({
-        where: { id: question.id },
-        data: {
-          previousQuestion: {
-            ...(newPrevious === null
-              ? {
-                  disconnect: true
-                }
-              : {
-                  connect: {
-                    id: newPrevious.id
-                  }
-                })
-          },
-          nextQuestion: {
-            ...(newPrevious === null
-              ? {
-                  connect: { id: firstQuestion.id }
-                }
-              : newPrevious.nextQuestion === null
-              ? {
-                  disconnect: true
-                }
-              : { connect: { id: newPrevious.nextQuestion.id } })
-          }
-        }
-      });
-
+      /**
+       * Disconnect question and reconnect the previous question with the next question
+       */
       if (question.previousQuestion !== null) {
-        if (question.nextQuestion !== null) {
-          await tx.question.update({
-            where: { id: question.previousQuestion.id },
-            data: {
-              nextQuestion: {
-                connect: { id: question.nextQuestion.id }
-              }
+        await tx.question.update({
+          where: { id: question.previousQuestion.id },
+          data: {
+            nextQuestion: {
+              ...(question.nextQuestion !== null
+                ? {
+                    connect: {
+                      id: question.nextQuestion.id
+                    }
+                  }
+                : { disconnect: true })
             }
-          });
-        }
+          }
+        });
       }
 
-      return {};
+      if (previous === null) {
+        await tx.question.update({
+          where: { id: questionId },
+          data: {
+            nextQuestion: {
+              connect: {
+                id: firstQuestion.id
+              }
+            }
+          }
+        });
+      } else {
+        /**
+         * Get the new previous and make its next question the current question's next question
+         */
+        const newPrevious = await tx.question.findFirstOrThrow({
+          where: { section: { id: sectionId }, id: previous },
+          include: {
+            nextQuestion: true
+          }
+        });
+
+        await tx.question.update({
+          where: { id: newPrevious.id },
+          data: {
+            nextQuestion: {
+              connect: {
+                id: question.id
+              }
+            }
+          }
+        });
+
+        await tx.question.update({
+          where: { id: question.id },
+          data: {
+            nextQuestion: {
+              ...(newPrevious.nextQuestion !== null
+                ? {
+                    connect: {
+                      id: newPrevious.nextQuestion.id
+                    }
+                  }
+                : { disconnect: true })
+            }
+          }
+        });
+      }
     });
   }
 
@@ -276,7 +283,7 @@ export class QuestionsService {
     type?: QuestionType,
     required?: boolean,
     hasOther?: boolean,
-    regex?: string
+    regex?: string | null
   ) {
     try {
       const question = await this.prisma.question.findFirst({
@@ -293,6 +300,19 @@ export class QuestionsService {
         );
       }
 
+      const condition = await this.prisma.condition.findFirst({
+        where: { question: { id: question.id } }
+      });
+
+      // Conditional questions must be required
+      if (condition && required === false) {
+        throw new BadRequestException(
+          "This question is linked to a condition. It must be required"
+        );
+      }
+
+      if (regex === "") regex = null;
+
       return await this.prisma.$transaction(async (tx) => {
         if (question.type === QuestionType.FREEFIELD && hasOther)
           hasOther = false;
@@ -300,11 +320,11 @@ export class QuestionsService {
         await tx.question.updateMany({
           where: { sectionId, id: questionId },
           data: {
-            ...(title ? { title } : {}),
-            ...(type ? { type } : {}),
-            ...(required ? { required } : {}),
-            ...(hasOther !== undefined ? { hasOther } : {}),
-            ...(typeof regex === "string" ? { regex } : {})
+            ...(typeof title === "string" ? { title } : {}),
+            ...(typeof type === "string" ? { type } : {}),
+            ...(typeof required === "boolean" ? { required } : {}),
+            ...(typeof hasOther === "boolean" ? { hasOther } : {}),
+            ...(regex !== undefined ? { regex } : {})
           }
         });
 
@@ -319,13 +339,53 @@ export class QuestionsService {
         });
       });
     } catch (error) {
-      this.handleQueryException(error);
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        this.handleQueryException(error);
+      }
     }
   }
 
   async deleteQuestion(sectionId: number, questionId: number) {
-    await this.prisma.question.deleteMany({
-      where: { id: questionId, sectionId }
+    const question = await this.prisma.question.findFirst({
+      where: { id: questionId, sectionId },
+      include: {
+        nextQuestion: true,
+        previousQuestion: true
+      }
+    });
+
+    if (!question) {
+      throw new NotFoundException("Question not found");
+    }
+
+    if (!question.nextQuestion && !question.previousQuestion) {
+      await this.prisma.question.delete({
+        where: { id: questionId }
+      });
+      return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (question.previousQuestion) {
+        await tx.question.update({
+          where: { id: question.previousQuestion.id },
+          data: {
+            nextQuestion: {
+              ...(question.nextQuestion !== null
+                ? {
+                    connect: { id: question.nextQuestion.id }
+                  }
+                : { disconnect: true })
+            }
+          }
+        });
+      }
+
+      await tx.question.deleteMany({
+        where: { id: questionId, sectionId }
+      });
     });
   }
 }

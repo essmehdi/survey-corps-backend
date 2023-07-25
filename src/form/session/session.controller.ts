@@ -1,4 +1,10 @@
-import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { UnusedTokenGuard } from "src/tokens/guards/unusedToken.guard";
 import { QuestionsService } from "../questions/questions.service";
@@ -25,7 +31,7 @@ export class SessionController {
    * Gets a section by ID
    */
   @Get("sections/:section")
-  async getSection(@Param("section") id: number) {
+  async getSection(@Param("section", ParseIntPipe) id: number) {
     return await this.sections.section(id);
   }
 
@@ -33,7 +39,7 @@ export class SessionController {
    * Gets questions of a section
    */
   @Get("sections/:section/questions")
-  async getSectionQuestions(@Param("section") section: number) {
+  async getSectionQuestions(@Param("section", ParseIntPipe) section: number) {
     return await this.questions.getQuestionsBySectionInOrder(section);
   }
 }

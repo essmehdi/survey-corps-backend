@@ -4,9 +4,11 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
@@ -17,10 +19,14 @@ import {
 } from "./dto/change-next-section.dto";
 import { SectionsService } from "./sections.service";
 import { EditSectionDto } from "./dto/edit-section.dto";
+import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
+import { EditInterceptor } from "../interceptors/edit.interceptor";
 
 @ApiTags("Admin form", "Sections")
 @Controller("admin/sections")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
+@UseInterceptors(EditInterceptor)
 export class SectionsController {
   constructor(private sections: SectionsService) {}
 
@@ -37,7 +43,7 @@ export class SectionsController {
    * Gets a section by ID
    */
   @Get(":section")
-  async getSection(@Param("section") sectionId: number) {
+  async getSection(@Param("section", ParseIntPipe) sectionId: number) {
     return await this.sections.section(sectionId);
   }
 
@@ -57,7 +63,7 @@ export class SectionsController {
    */
   @Patch(":section")
   async editSection(
-    @Param("section") sectionId: number,
+    @Param("section", ParseIntPipe) sectionId: number,
     @Body() editSectionDto: EditSectionDto
   ) {
     return await this.sections.editSection(sectionId, editSectionDto.title);
@@ -67,7 +73,7 @@ export class SectionsController {
    * Deletes a section
    */
   @Delete(":section")
-  async deleteSection(@Param("section") section: number) {
+  async deleteSection(@Param("section", ParseIntPipe) section: number) {
     await this.sections.deleteSection(section);
     return {
       message: "Section deleted successfully"
@@ -79,7 +85,7 @@ export class SectionsController {
    */
   @Post(":section/next")
   async nextSection(
-    @Param("section") section: number,
+    @Param("section", ParseIntPipe) section: number,
     @Body() changeNextSectionDto: ChangeNextSectionDto
   ) {
     if (changeNextSectionDto.type === NextSectionType.SECTION) {

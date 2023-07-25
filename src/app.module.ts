@@ -13,6 +13,8 @@ import { TokensModule } from "./tokens/tokens.module";
 import { MailModule } from "./mail/mail.module";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { join } from "path";
+import { NotifierModule } from "./notifier/notifier.module";
+import { StatsModule } from "./stats/stats.module";
 
 @Module({
   imports: [
@@ -23,7 +25,9 @@ import { join } from "path";
     ConfigModule.forRoot({ isGlobal: true }),
     ApplicationModule,
     TokensModule,
-    MailModule
+    MailModule,
+    NotifierModule,
+    StatsModule
   ],
   controllers: [AppController],
   providers: [AppService, UsersService]

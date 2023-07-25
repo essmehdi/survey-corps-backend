@@ -19,6 +19,9 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     try {
       const user: Partial<User> = await this.users.getUserByEmail(email, true);
+      if (user.password === null) {
+        throw new BadRequestException("Invalid credentials");
+      }
       if (user && (await bcrypt.compare(password, user.password))) {
         return user;
       }

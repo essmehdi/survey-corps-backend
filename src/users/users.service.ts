@@ -7,7 +7,7 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { Prisma, PrismaClient, Privilege } from "@prisma/client";
+import { Prisma, PrismaClient, Privilege, User } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaError } from "prisma-error-enum";
@@ -21,9 +21,10 @@ import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class UsersService {
-  private xprisma: Omit<PrismaClient, "$use">;
+  private xprisma: any;
   private readonly logger = new Logger(UsersService.name);
   private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
+  private static readonly PASSWORD_RESET_TOKEN_LIFESPAN = 86400000; // 1 days
   private static PUBLIC_PROJECTION = {
     id: true,
     fullname: true,
@@ -169,32 +170,37 @@ export class UsersService {
     }
   }
 
-  async getLeaderboard() {
-    return (
-      await this.xprisma.user.findMany({
-        where: {
-          tokens: {
-            some: {}
-          }
-        },
-        select: {
-          ...UsersService.PUBLIC_PROJECTION,
-          _count: {
-            select: {
-              tokens: {
-                where: {
-                  submitted: true
-                }
+  async getLeaderboard(page: number = 1, limit: number = 30) {
+    const [leaderboard, count] = await this.getUsersAndCount({
+      where: {
+        tokens: {
+          some: {}
+        }
+      },
+      select: {
+        ...UsersService.PUBLIC_PROJECTION,
+        _count: {
+          select: {
+            tokens: {
+              where: {
+                submitted: true
               }
             }
           }
         }
-      })
-    ).map(({ fullname, email, _count }) => ({
-      fullname,
-      email,
-      count: _count.tokens
-    }));
+      }
+    });
+
+    return paginatedResponse(
+      leaderboard.map(({ fullname, email, _count }) => ({
+        fullname,
+        email,
+        count: _count.tokens
+      })),
+      page,
+      limit,
+      count
+    );
   }
 
   async createUser(
@@ -326,6 +332,107 @@ export class UsersService {
   }
 
   /**
+   * Verify password reset token
+   */
+  async verifyForgotPasswordToken(token: string) {
+    try {
+      const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
+        where: { token }
+      });
+      // Check if it's not expired
+      if (!this.checkForgotPasswordTokenValidity(t.createdAt)) {
+        return {
+          valid: false,
+          expired: true
+        };
+      }
+      return {
+        valid: true
+      };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordsNotFound
+      ) {
+        return {
+          valid: false
+        };
+      }
+      this.handleQueryException(error);
+    }
+  }
+
+  /**
+   * Send a password reset link to the user
+   */
+  async sendPasswordResetLink(email: string) {
+    const presentToken = await this.prisma.forgotPasswordToken.findFirst({
+      where: { user: { email } }
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      if (presentToken) {
+        await tx.forgotPasswordToken.delete({ where: { id: presentToken.id } });
+      }
+
+      const token = randomUUID();
+      const user = await tx.user.update({
+        where: { email },
+        data: {
+          forgotPasswordToken: {
+            create: {
+              token
+            }
+          }
+        }
+      });
+      await this.mail.sendPasswordResetEmail(user.email, user.fullname, token);
+    });
+  }
+
+  /**
+   * Reset user password using password reset token
+   */
+  async resetUserPassword(token: string, password: string) {
+    try {
+      const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
+        where: { token },
+        include: { user: true }
+      });
+      if (
+        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
+      ) {
+        throw new ForbiddenException("Expired token");
+      }
+      await this.prisma.user.update({
+        where: { id: t.user.id },
+        data: {
+          password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
+          forgotPasswordToken: {
+            delete: true
+          }
+        }
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordsNotFound
+      ) {
+        throw new ForbiddenException("Invalid token");
+      }
+      this.handleQueryException(error);
+    }
+  }
+
+  private async checkForgotPasswordTokenValidity(createdAt: Date) {
+    return (
+      new Date().getMilliseconds() - createdAt.getMilliseconds() <
+      UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
+    );
+  }
+
+  /**
    * Disables user account
    * @param userId User's id
    */
@@ -335,6 +442,23 @@ export class UsersService {
         where: { id: userId },
         data: {
           isActive: false
+        }
+      });
+    } catch (error) {
+      this.handleQueryException(error);
+    }
+  }
+
+  /**
+   * Enables user account
+   * @param userId User's id
+   */
+  async enableUser(userId: number) {
+    try {
+      await this.xprisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: true
         }
       });
     } catch (error) {

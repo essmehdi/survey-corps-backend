@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -38,10 +39,8 @@ export class ApplicationController {
   @Get("admin/applications")
   @UseGuards(AdminGuard)
   async getAllApplications(@Query() getApplicationsDto: ApplicationsQueryDto) {
-    const { status } = getApplicationsDto;
-    if (status === StatusOptions.PENDING)
-      return await this.applications.getAllPendingApplications();
-    return await this.applications.getAllRespondedApplications();
+    const { status, page, limit } = getApplicationsDto;
+    return await this.applications.getApplications(status, page, limit);
   }
 
   /**
@@ -49,7 +48,9 @@ export class ApplicationController {
    */
   @Get("admin/applications/:application")
   @UseGuards(AdminGuard)
-  async getApplication(@Param("application") applicationId: number) {
+  async getApplication(
+    @Param("application", ParseIntPipe) applicationId: number
+  ) {
     return await this.applications.getApplication(applicationId);
   }
 
@@ -58,14 +59,13 @@ export class ApplicationController {
    */
   @Post("admin/applications/:application/accept")
   @UseGuards(AdminGuard)
-  async acceptApplication(@Param("application") applicationId: number) {
-    await this.applications.respondToApplication(
+  async acceptApplication(
+    @Param("application", ParseIntPipe) applicationId: number
+  ) {
+    return await this.applications.respondToApplication(
       applicationId,
       ApplicationStatus.GRANTED
     );
-    return {
-      message: "The application has been successfully accepted"
-    };
   }
 
   /**
@@ -73,13 +73,12 @@ export class ApplicationController {
    */
   @Post("admin/applications/:application/reject")
   @UseGuards(AdminGuard)
-  async rejectApplication(@Param("application") applicationId: number) {
-    await this.applications.respondToApplication(
+  async rejectApplication(
+    @Param("application", ParseIntPipe) applicationId: number
+  ) {
+    return await this.applications.respondToApplication(
       applicationId,
       ApplicationStatus.REJECTED
     );
-    return {
-      message: "The application has been successfully rejected"
-    };
   }
 }

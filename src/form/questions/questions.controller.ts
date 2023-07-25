@@ -5,9 +5,11 @@ import {
   Get,
   Logger,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
@@ -15,10 +17,14 @@ import { AddQuestionDto } from "./dto/add-question.dto";
 import { EditQuestionDto } from "./dto/edit-question.dto";
 import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
+import { EditInterceptor } from "../interceptors/edit.interceptor";
+import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
+@UseInterceptors(EditInterceptor)
 export class QuestionsController {
   constructor(private questions: QuestionsService) {}
 
@@ -27,8 +33,8 @@ export class QuestionsController {
    */
   @Get(":question")
   async getQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number
   ) {
     return await this.questions.getQuestionById(section, question);
   }
@@ -37,7 +43,7 @@ export class QuestionsController {
    * Gets all questions of a section
    */
   @Get()
-  async getAllQuestions(@Param("section") section: number) {
+  async getAllQuestions(@Param("section", ParseIntPipe) section: number) {
     return await this.questions.getQuestionsBySectionInOrder(section);
   }
 
@@ -46,7 +52,7 @@ export class QuestionsController {
    */
   @Post()
   async addQuestion(
-    @Param("section") section: number,
+    @Param("section", ParseIntPipe) section: number,
     @Body() addQuestionDto: AddQuestionDto
   ) {
     const newQuestion = await this.questions.addQuestion(
@@ -67,8 +73,8 @@ export class QuestionsController {
    */
   @Patch(":question")
   async editQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number,
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
     @Body() editQuestionDto: EditQuestionDto
   ) {
     const { title, type, required, hasOther, regex } = editQuestionDto;
@@ -86,10 +92,10 @@ export class QuestionsController {
   /**
    * Changes the order of a question in a section
    */
-  @Patch(":question")
+  @Patch(":question/reorder")
   async reorderQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number,
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
     @Body() reorderQuestionDto: ReorderQuestionDto
   ) {
     const { previous } = reorderQuestionDto;
@@ -104,8 +110,8 @@ export class QuestionsController {
    */
   @Delete(":question")
   async deleteQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number
   ) {
     await this.questions.deleteQuestion(section, question);
     return {

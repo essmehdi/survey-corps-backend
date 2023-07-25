@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsNumber,
   IsObject,
+  IsOptional,
   IsPositive,
   registerDecorator,
   ValidateIf,
@@ -12,8 +13,8 @@ import {
 } from "class-validator";
 
 export enum NextSectionType {
-  SECTION = "section",
-  CONDITION = "condition"
+  SECTION = "SECTION",
+  CONDITION = "CONDITION"
 }
 
 function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
@@ -62,8 +63,11 @@ export class ChangeNextSectionDto {
   /**
    * Should be specified if type is 'SECTION'
    */
-  @ValidateIf((self) => self.type === NextSectionType.SECTION)
-  section?: number;
+  @ValidateIf(
+    (self, value) => self.type === NextSectionType.SECTION && value !== null
+  )
+  @IsNumber()
+  section?: number | null;
 
   /**
    * Should be specified if type is 'CONDITION'

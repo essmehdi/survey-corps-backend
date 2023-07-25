@@ -131,10 +131,10 @@ export class SubmissionsService {
             !nextQuestionId &&
             nextSectionId === answer.sectionId)
         ) {
-          const section = await this.prisma.questionSection.findUnique({
+          const section = await tx.questionSection.findUnique({
             where: { id: answer.sectionId },
             include: {
-              previousSection: true,
+              previousSections: true,
               nextSection: true,
               conditioned: true
             }
@@ -149,7 +149,8 @@ export class SubmissionsService {
           // Check if the section is the first element of the submission matches with the database
           if (
             !currentSection &&
-            (section.previousSection || section.conditioned.length > 0)
+            (section.previousSections.length > 0 ||
+              section.conditioned.length > 0)
           )
             throw new BadRequestException(
               `Section #${answer.sectionId} is not the first`
@@ -161,7 +162,7 @@ export class SubmissionsService {
         }
 
         // Get the current question
-        const question = await this.prisma.question.findFirst({
+        const question = await tx.question.findFirst({
           where: { id: answer.questionId, sectionId: answer.sectionId },
           include: { nextQuestion: true, conditions: true }
         });
@@ -184,7 +185,7 @@ export class SubmissionsService {
           // Validate answers
           if (question.type !== QuestionType.FREEFIELD) {
             const answers = (
-              await this.prisma.answer.findMany({
+              await tx.answer.findMany({
                 where: { question: { id: question.id } },
                 select: { id: true }
               })

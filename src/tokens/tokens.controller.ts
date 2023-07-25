@@ -4,6 +4,7 @@ import {
   Get,
   Logger,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -73,7 +74,7 @@ export class TokensController {
   @UseGuards(CookieAuthenticationGuard)
   async revoke(
     @Req() request: RequestWithUser,
-    @Param("token") tokenId: number
+    @Param("token", ParseIntPipe) tokenId: number
   ) {
     await this.tokens.removeToken(request.user, tokenId);
     return {
