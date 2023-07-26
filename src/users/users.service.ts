@@ -230,26 +230,28 @@ export class UsersService {
   ) {
     const token = randomUUID();
     try {
-      // Create the user
-      const newUser = await this.xprisma.user.create({
-        data: {
-          firstname,
-          lastname,
-          email,
-          privilege,
-          registrationToken: {
-            create: {
-              token
+      await this.xprisma.$transaction(async (tx) => {
+        // Create the user
+        const newUser = await tx.user.create({
+          data: {
+            firstname,
+            lastname,
+            email,
+            privilege,
+            registrationToken: {
+              create: {
+                token
+              }
             }
           }
-        }
+        });
+        // Send mail
+        await this.mail.sendRegistrationEmail(
+          email,
+          this.getFullname(newUser),
+          token
+        );
       });
-      // Send mail
-      await this.mail.sendRegistrationEmail(
-        email,
-        this.getFullname(newUser),
-        token
-      );
     } catch (error) {
       this.handleQueryException(error);
     }
