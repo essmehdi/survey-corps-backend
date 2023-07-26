@@ -49,8 +49,9 @@ export class UsersController {
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
   async me(@Request() request: RequestWithUser) {
-    const { id, fullname, email, privilege, isActive } = request.user;
-    return { id, fullname, email, privilege, isActive };
+    const { id, firstname, lastname, email, privilege, isActive } =
+      request.user;
+    return { id, firstname, lastname, email, privilege, isActive };
   }
 
   /**
@@ -59,8 +60,8 @@ export class UsersController {
   @Post("register")
   @UseGuards(AdminGuard)
   async register(@Body() registerUserDto: RegisterUserDto) {
-    const { fullname, email, privilege } = registerUserDto;
-    await this.users.createUser(fullname, email, privilege);
+    const { firstname, lastname, email, privilege } = registerUserDto;
+    await this.users.createUser(firstname, lastname, email, privilege);
     return {
       message: "User successfully registered"
     };
@@ -174,8 +175,8 @@ export class UsersController {
     @Param("id", ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto
   ) {
-    const { fullname, email, privilege } = updateUserDto;
-    await this.users.updateUser(id, fullname, email, privilege);
+    const { firstname, lastname, email, privilege } = updateUserDto;
+    await this.users.updateUser(id, firstname, lastname, email, privilege);
     return {
       message: "User updated successfully"
     };

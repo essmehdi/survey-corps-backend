@@ -27,7 +27,8 @@ export class UsersService {
   private static readonly PASSWORD_RESET_TOKEN_LIFESPAN = 86400000; // 1 days
   private static PUBLIC_PROJECTION = {
     id: true,
-    fullname: true,
+    firstname: true,
+    lastname: true,
     email: true,
     isActive: true,
     registered: true,
@@ -100,6 +101,10 @@ export class UsersService {
     ]);
   }
 
+  private getFullname(user: User) {
+    return `${user.firstname} ${user.lastname}`;
+  }
+
   async getAllUsers(
     privilegeFilter: PrivilegeFilter,
     page: number = 1,
@@ -112,7 +117,14 @@ export class UsersService {
           ? { privilege: privilegeFilter }
           : {};
 
-      if (search) whereQuery.fullname = { search: convertToTsquery(search) };
+      const tsquery = convertToTsquery(search);
+      if (search) {
+        whereQuery.OR = [
+          { firstname: { search: tsquery } },
+          { lastname: { search: tsquery } },
+          { email: { search: tsquery } }
+        ];
+      }
 
       const [users, count] = await this.getUsersAndCount({
         where: whereQuery,
@@ -156,14 +168,20 @@ export class UsersService {
 
   async updateUser(
     id: number,
-    fullname: string,
+    firstname: string,
+    lastname: string,
     email: string,
     privilege?: Privilege
   ) {
     try {
       await this.xprisma.user.update({
         where: { id },
-        data: { fullname, email, ...(privilege ? { privilege } : {}) }
+        data: {
+          firstname,
+          lastname,
+          email,
+          ...(privilege ? { privilege } : {})
+        }
       });
     } catch (error) {
       this.handleQueryException(error);
@@ -192,8 +210,9 @@ export class UsersService {
     });
 
     return paginatedResponse(
-      leaderboard.map(({ fullname, email, _count }) => ({
-        fullname,
+      leaderboard.map(({ firstname, lastname, email, _count }) => ({
+        firstname,
+        lastname,
         email,
         count: _count.tokens
       })),
@@ -204,16 +223,18 @@ export class UsersService {
   }
 
   async createUser(
-    fullname: string,
+    firstname: string,
+    lastname: string,
     email: string,
     privilege: Privilege = "MEMBER"
   ) {
     const token = randomUUID();
     try {
       // Create the user
-      await this.xprisma.user.create({
+      const newUser = await this.xprisma.user.create({
         data: {
-          fullname,
+          firstname,
+          lastname,
           email,
           privilege,
           registrationToken: {
@@ -224,7 +245,11 @@ export class UsersService {
         }
       });
       // Send mail
-      await this.mail.sendRegistrationEmail(email, fullname, token);
+      await this.mail.sendRegistrationEmail(
+        email,
+        this.getFullname(newUser),
+        token
+      );
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -323,7 +348,7 @@ export class UsersService {
       });
       await this.mail.sendRegistrationEmail(
         user.email,
-        user.fullname,
+        this.getFullname(user),
         newToken
       );
     } catch (error) {
@@ -386,7 +411,11 @@ export class UsersService {
           }
         }
       });
-      await this.mail.sendPasswordResetEmail(user.email, user.fullname, token);
+      await this.mail.sendPasswordResetEmail(
+        user.email,
+        this.getFullname(user),
+        token
+      );
     });
   }
 

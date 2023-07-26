@@ -9,11 +9,18 @@ import {
 
 export class RegisterUserDto {
   /**
-   * User's fullname
+   * User's firstname
    */
   @IsString()
   @IsNotEmpty()
-  fullname: string;
+  firstname: string;
+
+  /**
+   * User's lastname
+   */
+  @IsString()
+  @IsNotEmpty()
+  lastname: string;
 
   /**
    * User's email
