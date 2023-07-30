@@ -34,7 +34,11 @@ export class TokensController {
   async generate(@Req() request: RequestWithUser) {
     const token = await this.tokens.generateTokenForUser(request.user.id);
     this.logger.log(
-      "Token created by " + request.user.fullname + ": " + token.token
+      "Token created by user #" +
+        request.user.id +
+        ` (${request.user.firstname} ${request.user.lastname})` +
+        ": " +
+        token.token
     );
     return token;
   }
