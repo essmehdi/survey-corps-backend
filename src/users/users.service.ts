@@ -18,6 +18,8 @@ import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import * as bcrypt from "bcrypt";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 @Injectable()
 export class UsersService {
@@ -246,11 +248,7 @@ export class UsersService {
           }
         });
         // Send mail
-        await this.mail.sendRegistrationEmail(
-          email,
-          this.getFullname(newUser),
-          token
-        );
+        await this.mail.sendRegistrationEmail(email, newUser.firstname, token);
       });
     } catch (error) {
       this.handleQueryException(error);
@@ -350,7 +348,7 @@ export class UsersService {
       });
       await this.mail.sendRegistrationEmail(
         user.email,
-        this.getFullname(user),
+        user.firstname,
         newToken
       );
     } catch (error) {
@@ -413,11 +411,7 @@ export class UsersService {
           }
         }
       });
-      await this.mail.sendPasswordResetEmail(
-        user.email,
-        this.getFullname(user),
-        token
-      );
+      await this.mail.sendPasswordResetEmail(user.email, user.firstname, token);
     });
   }
 
@@ -494,6 +488,60 @@ export class UsersService {
       });
     } catch (error) {
       this.handleQueryException(error);
+    }
+  }
+
+  /**
+   * Gets a user profile picture
+   */
+  async getProfilePictureBuffer(userId: number) {
+    try {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          profilePicture: true
+        }
+      });
+      if (!user.profilePicture || user.profilePicture.length === 0) {
+        return readFileSync(
+          join(process.cwd(), "static", "default-profile-pic.jpg")
+        );
+      }
+      return user.profilePicture;
+    } catch (err) {
+      this.handleQueryException(err);
+    }
+  }
+
+  /**
+   * Changes user profile picture
+   */
+  async updateProfilePicture(userId: number, buffer: Buffer) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          profilePicture: buffer
+        }
+      });
+    } catch (err) {
+      this.handleQueryException(err);
+    }
+  }
+
+  /**
+   * Deletes user profile picture
+   */
+  async deleteProfilePicture(userId: number) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          profilePicture: null
+        }
+      });
+    } catch (err) {
+      this.handleQueryException(err);
     }
   }
 }
