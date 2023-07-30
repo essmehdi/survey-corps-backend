@@ -36,6 +36,7 @@ model User {
   firstname           String
   lastname            String
   email               String               @unique
+  profilePicture      Bytes?
   password            String?
   privilege           Privilege            @default(MEMBER)
   isActive            Boolean              @default(false)
