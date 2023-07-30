@@ -22,8 +22,8 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(LogInWithCredentialsGuard)
   async logIn(@Request() request: RequestWithUser) {
-    const { fullname, email, privilege, isActive } = request.user;
-    return { fullname, email, privilege, isActive };
+    const { firstname, lastname, email, privilege, isActive } = request.user;
+    return { firstname, lastname, email, privilege, isActive };
   }
 
   /**

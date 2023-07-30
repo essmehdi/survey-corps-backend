@@ -27,24 +27,28 @@ export class MailService {
     this.sendTakeoutEmail(email, "Survey form application approved", html);
   }
 
-  async sendRegistrationEmail(email: string, fullname: string, token: string) {
+  async sendRegistrationEmail(email: string, firstname: string, token: string) {
     const registrationLink =
       this.config.get("FRONTEND_URL") + "/register/" + token;
 
     const html = this.getPopulatedTemplate("registration.html", {
       url: registrationLink,
-      fullname
+      firstname
     });
 
     this.sendTakeoutEmail(email, "Registration link", html);
   }
 
-  async sendPasswordResetEmail(email: string, fullname: string, token: string) {
+  async sendPasswordResetEmail(
+    email: string,
+    firstname: string,
+    token: string
+  ) {
     const resetLink = this.config.get("FRONTEND_URL") + "/reset/" + token;
 
     const html = this.getPopulatedTemplate("password-reset.html", {
       url: resetLink,
-      fullname
+      firstname
     });
 
     this.sendTakeoutEmail(email, "Password reset link", html);
