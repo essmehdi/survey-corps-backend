@@ -7,7 +7,6 @@ export class NotifierService {
   private subject = new Subject<{ name: string; data: unknown }>();
 
   addEvent(eventName: string, eventData: unknown): void {
-    this.logger.debug(`Event: ${eventName}`);
     this.subject.next({ name: eventName, data: eventData });
   }
 
