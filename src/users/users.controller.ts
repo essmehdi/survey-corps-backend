@@ -35,7 +35,6 @@ import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
 import { ResetPasswordRequestDto } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { createReadStream } from "fs";
-import { fileTypeFromBuffer, fileTypeFromStream } from "file-type";
 import { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 
@@ -200,6 +199,7 @@ export class UsersController {
     @Res() response: Response
   ) {
     const buffer = await this.users.getProfilePictureBuffer(id);
+    const { fileTypeFromBuffer } = await import("file-type");
     const fileType = await fileTypeFromBuffer(buffer);
     response.setHeader("Content-Type", fileType.mime);
     response.setHeader(
