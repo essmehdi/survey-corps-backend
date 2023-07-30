@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   ParseUUIDPipe,
   Patch,
+  PayloadTooLargeException,
   Post,
   Put,
   Query,
@@ -206,7 +207,7 @@ export class UsersController {
       "Content-Disposition",
       `attachment; filename=profile-picture.${fileType.ext}`
     );
-    response.send(createReadStream(buffer));
+    response.send(buffer);
   }
 
   @Put("me/profile-picture")
@@ -214,6 +215,12 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor("file", {
       fileFilter: (_, file, callback) => {
+        if (file.size > 1024 * 1024 * 5) {
+          callback(
+            new PayloadTooLargeException("File must be less than 5MB"),
+            false
+          );
+        }
         if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
           callback(
             new UnsupportedMediaTypeException("File must be an image"),
