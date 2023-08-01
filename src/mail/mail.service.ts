@@ -1,16 +1,18 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Application } from "@prisma/client";
-import { readFile, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import Handlebars from "handlebars";
-import * as nodemailer from "nodemailer";
 import { join } from "path";
-import * as TakeoutClient from "takeout.js";
+import { Resend } from "resend";
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  constructor(private readonly config: ConfigService) {}
+  private readonly resend: Resend;
+
+  constructor(private readonly config: ConfigService) {
+    this.resend = new Resend(config.get("RESEND_API_KEY"));
+  }
 
   async sendApplicationApproved(
     email: string,
@@ -24,7 +26,7 @@ export class MailService {
       fullname
     });
 
-    this.sendTakeoutEmail(email, "Survey form application approved", html);
+    this.sendEmail(email, "Survey form application approved", html);
   }
 
   async sendRegistrationEmail(email: string, firstname: string, token: string) {
@@ -36,7 +38,7 @@ export class MailService {
       firstname
     });
 
-    this.sendTakeoutEmail(email, "Registration link", html);
+    this.sendEmail(email, "Registration link", html);
   }
 
   async sendPasswordResetEmail(
@@ -51,7 +53,7 @@ export class MailService {
       firstname
     });
 
-    this.sendTakeoutEmail(email, "Password reset link", html);
+    this.sendEmail(email, "Password reset link", html);
   }
 
   private getPopulatedTemplate(
@@ -70,20 +72,22 @@ export class MailService {
   }
 
   /**
-   * Sends email using Takeout API
+   * Sends email
    * @param email Recipient email
    * @param subject Email subject
    * @param html Email HTML body
    */
-  private async sendTakeoutEmail(email: string, subject: string, html: string) {
-    const takeoutClient = new TakeoutClient();
-    takeoutClient.login(this.config.get("TAKEOUT_TOKEN"));
-    const response = await takeoutClient.send({
-      to: email,
-      from: "ENSIAS Bridge",
-      subject,
-      html
-    });
-    this.logger.log("Takeout email sent: " + response.id);
+  private async sendEmail(email: string, subject: string, html: string) {
+    try {
+      const data = await this.resend.emails.send({
+        to: email,
+        from: `ENSIAS Bridge Survey Team <${this.config.get("MAIL_ADDRESS")}>`,
+        subject,
+        html
+      });
+      this.logger.log(`Email sent: ${data.id}`);
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 }
