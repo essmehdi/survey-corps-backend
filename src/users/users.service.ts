@@ -179,9 +179,9 @@ export class UsersService {
       await this.xprisma.user.update({
         where: { id },
         data: {
-          firstname,
-          lastname,
-          email,
+          ...(firstname ? { firstname } : {}),
+          ...(lastname ? { lastname } : {}),
+          ...(email ? { email } : {}),
           ...(privilege ? { privilege } : {})
         }
       });
