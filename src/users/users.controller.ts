@@ -38,6 +38,7 @@ import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { createReadStream } from "fs";
 import { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { UpdatePersonalDataDto } from "./dto/update-personal-data.dto";
 
 @ApiTags("Users")
 @Controller("users")
@@ -68,14 +69,19 @@ export class UsersController {
   /**
    * Gets info about the authenticated user
    */
-  @Put("me")
+  @Patch("me")
   @UseGuards(CookieAuthenticationGuard)
   async updateMe(
     @Request() request: RequestWithUser,
-    @Body() updateUserDto: UpdateUserDto
+    @Body() updateUserDto: UpdatePersonalDataDto
   ) {
-    const { firstname, lastname, email } = updateUserDto;
-    await this.users.updateUser(request.user.id, firstname, lastname, email);
+    const { firstname, lastname } = updateUserDto;
+    await this.users.updateUser(
+      request.user.id,
+      firstname,
+      lastname,
+      request.user.email
+    );
     return {
       message: "User updated successfully"
     };
