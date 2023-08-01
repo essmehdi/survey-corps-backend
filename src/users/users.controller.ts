@@ -66,6 +66,68 @@ export class UsersController {
   }
 
   /**
+   * Gets info about the authenticated user
+   */
+  @Put("me")
+  @UseGuards(CookieAuthenticationGuard)
+  async updateMe(
+    @Request() request: RequestWithUser,
+    @Body() updateUserDto: UpdateUserDto
+  ) {
+    const { firstname, lastname, email } = updateUserDto;
+    await this.users.updateUser(request.user.id, firstname, lastname, email);
+    return {
+      message: "User updated successfully"
+    };
+  }
+
+  /**
+   * Changes the profile picture of the connected user
+   */
+  @Put("me/profile-picture")
+  @UseGuards(CookieAuthenticationGuard)
+  @UseInterceptors(
+    FileInterceptor("file", {
+      fileFilter: (_, file, callback) => {
+        if (file.size > 1024 * 1024 * 5) {
+          callback(
+            new PayloadTooLargeException("File must be less than 5MB"),
+            false
+          );
+        }
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          callback(
+            new UnsupportedMediaTypeException("File must be an image"),
+            false
+          );
+        }
+        callback(null, true);
+      }
+    })
+  )
+  async updateProfilePicture(
+    @Req() request: RequestWithUser,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    await this.users.updateProfilePicture(request.user.id, file.buffer);
+    return {
+      message: "Profile picture updated successfully"
+    };
+  }
+
+  /**
+   * Removes the profile picture of the connected user
+   */
+  @Delete("me/profile-picture")
+  @UseGuards(CookieAuthenticationGuard)
+  async deleteProfilePicture(@Req() request: RequestWithUser) {
+    await this.users.deleteProfilePicture(request.user.id);
+    return {
+      message: "Profile picture deleted successfully"
+    };
+  }
+
+  /**
    * Registers a new user
    */
   @Post("register")
@@ -208,46 +270,6 @@ export class UsersController {
       `attachment; filename=profile-picture.${fileType.ext}`
     );
     response.send(buffer);
-  }
-
-  @Put("me/profile-picture")
-  @UseGuards(CookieAuthenticationGuard)
-  @UseInterceptors(
-    FileInterceptor("file", {
-      fileFilter: (_, file, callback) => {
-        if (file.size > 1024 * 1024 * 5) {
-          callback(
-            new PayloadTooLargeException("File must be less than 5MB"),
-            false
-          );
-        }
-        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
-          callback(
-            new UnsupportedMediaTypeException("File must be an image"),
-            false
-          );
-        }
-        callback(null, true);
-      }
-    })
-  )
-  async updateProfilePicture(
-    @Req() request: RequestWithUser,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    await this.users.updateProfilePicture(request.user.id, file.buffer);
-    return {
-      message: "Profile picture updated successfully"
-    };
-  }
-
-  @Delete("me/profile-picture")
-  @UseGuards(CookieAuthenticationGuard)
-  async deleteProfilePicture(@Req() request: RequestWithUser) {
-    await this.users.deleteProfilePicture(request.user.id);
-    return {
-      message: "Profile picture deleted successfully"
-    };
   }
 
   /**
