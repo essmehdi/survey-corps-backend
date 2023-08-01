@@ -18,6 +18,8 @@ import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import * as bcrypt from "bcrypt";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 @Injectable()
 export class UsersService {
@@ -27,7 +29,8 @@ export class UsersService {
   private static readonly PASSWORD_RESET_TOKEN_LIFESPAN = 86400000; // 1 days
   private static PUBLIC_PROJECTION = {
     id: true,
-    fullname: true,
+    firstname: true,
+    lastname: true,
     email: true,
     isActive: true,
     registered: true,
@@ -100,6 +103,10 @@ export class UsersService {
     ]);
   }
 
+  private getFullname(user: User) {
+    return `${user.firstname} ${user.lastname}`;
+  }
+
   async getAllUsers(
     privilegeFilter: PrivilegeFilter,
     page: number = 1,
@@ -112,7 +119,14 @@ export class UsersService {
           ? { privilege: privilegeFilter }
           : {};
 
-      if (search) whereQuery.fullname = { search: convertToTsquery(search) };
+      const tsquery = convertToTsquery(search);
+      if (search) {
+        whereQuery.OR = [
+          { firstname: { search: tsquery } },
+          { lastname: { search: tsquery } },
+          { email: { search: tsquery } }
+        ];
+      }
 
       const [users, count] = await this.getUsersAndCount({
         where: whereQuery,
@@ -156,14 +170,20 @@ export class UsersService {
 
   async updateUser(
     id: number,
-    fullname: string,
+    firstname: string,
+    lastname: string,
     email: string,
     privilege?: Privilege
   ) {
     try {
       await this.xprisma.user.update({
         where: { id },
-        data: { fullname, email, ...(privilege ? { privilege } : {}) }
+        data: {
+          ...(firstname ? { firstname } : {}),
+          ...(lastname ? { lastname } : {}),
+          ...(email ? { email } : {}),
+          ...(privilege ? { privilege } : {})
+        }
       });
     } catch (error) {
       this.handleQueryException(error);
@@ -192,8 +212,9 @@ export class UsersService {
     });
 
     return paginatedResponse(
-      leaderboard.map(({ fullname, email, _count }) => ({
-        fullname,
+      leaderboard.map(({ firstname, lastname, email, _count }) => ({
+        firstname,
+        lastname,
         email,
         count: _count.tokens
       })),
@@ -204,27 +225,31 @@ export class UsersService {
   }
 
   async createUser(
-    fullname: string,
+    firstname: string,
+    lastname: string,
     email: string,
     privilege: Privilege = "MEMBER"
   ) {
     const token = randomUUID();
     try {
-      // Create the user
-      await this.xprisma.user.create({
-        data: {
-          fullname,
-          email,
-          privilege,
-          registrationToken: {
-            create: {
-              token
+      await this.xprisma.$transaction(async (tx) => {
+        // Create the user
+        const newUser = await tx.user.create({
+          data: {
+            firstname,
+            lastname,
+            email,
+            privilege,
+            registrationToken: {
+              create: {
+                token
+              }
             }
           }
-        }
+        });
+        // Send mail
+        await this.mail.sendRegistrationEmail(email, newUser.firstname, token);
       });
-      // Send mail
-      await this.mail.sendRegistrationEmail(email, fullname, token);
     } catch (error) {
       this.handleQueryException(error);
     }
@@ -323,7 +348,7 @@ export class UsersService {
       });
       await this.mail.sendRegistrationEmail(
         user.email,
-        user.fullname,
+        user.firstname,
         newToken
       );
     } catch (error) {
@@ -386,7 +411,7 @@ export class UsersService {
           }
         }
       });
-      await this.mail.sendPasswordResetEmail(user.email, user.fullname, token);
+      await this.mail.sendPasswordResetEmail(user.email, user.firstname, token);
     });
   }
 
@@ -463,6 +488,60 @@ export class UsersService {
       });
     } catch (error) {
       this.handleQueryException(error);
+    }
+  }
+
+  /**
+   * Gets a user profile picture
+   */
+  async getProfilePictureBuffer(userId: number) {
+    try {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          profilePicture: true
+        }
+      });
+      if (!user.profilePicture || user.profilePicture.length === 0) {
+        return readFileSync(
+          join(process.cwd(), "static", "default-profile-pic.jpg")
+        );
+      }
+      return user.profilePicture;
+    } catch (err) {
+      this.handleQueryException(err);
+    }
+  }
+
+  /**
+   * Changes user profile picture
+   */
+  async updateProfilePicture(userId: number, buffer: Buffer) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          profilePicture: buffer
+        }
+      });
+    } catch (err) {
+      this.handleQueryException(err);
+    }
+  }
+
+  /**
+   * Deletes user profile picture
+   */
+  async deleteProfilePicture(userId: number) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          profilePicture: null
+        }
+      });
+    } catch (err) {
+      this.handleQueryException(err);
     }
   }
 }

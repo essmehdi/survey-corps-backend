@@ -2,17 +2,25 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Logger,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
   Patch,
+  PayloadTooLargeException,
   Post,
+  Put,
   Query,
   Req,
   Request,
-  UseGuards
+  Res,
+  StreamableFile,
+  UnsupportedMediaTypeException,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { Prisma } from "@prisma/client";
@@ -27,6 +35,10 @@ import { UsersService } from "./users.service";
 import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
 import { ResetPasswordRequestDto } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { createReadStream } from "fs";
+import { Response } from "express";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { UpdatePersonalDataDto } from "./dto/update-personal-data.dto";
 
 @ApiTags("Users")
 @Controller("users")
@@ -49,8 +61,76 @@ export class UsersController {
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
   async me(@Request() request: RequestWithUser) {
-    const { id, fullname, email, privilege, isActive } = request.user;
-    return { id, fullname, email, privilege, isActive };
+    const { id, firstname, lastname, email, privilege, isActive } =
+      request.user;
+    return { id, firstname, lastname, email, privilege, isActive };
+  }
+
+  /**
+   * Gets info about the authenticated user
+   */
+  @Patch("me")
+  @UseGuards(CookieAuthenticationGuard)
+  async updateMe(
+    @Request() request: RequestWithUser,
+    @Body() updateUserDto: UpdatePersonalDataDto
+  ) {
+    const { firstname, lastname } = updateUserDto;
+    await this.users.updateUser(
+      request.user.id,
+      firstname,
+      lastname,
+      request.user.email
+    );
+    return {
+      message: "User updated successfully"
+    };
+  }
+
+  /**
+   * Changes the profile picture of the connected user
+   */
+  @Put("me/profile-picture")
+  @UseGuards(CookieAuthenticationGuard)
+  @UseInterceptors(
+    FileInterceptor("file", {
+      fileFilter: (_, file, callback) => {
+        if (file.size > 1024 * 1024 * 5) {
+          callback(
+            new PayloadTooLargeException("File must be less than 5MB"),
+            false
+          );
+        }
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          callback(
+            new UnsupportedMediaTypeException("File must be an image"),
+            false
+          );
+        }
+        callback(null, true);
+      }
+    })
+  )
+  async updateProfilePicture(
+    @Req() request: RequestWithUser,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    await this.users.updateProfilePicture(request.user.id, file.buffer);
+    return {
+      message: "Profile picture updated successfully"
+    };
+  }
+
+  /**
+   * Removes the profile picture of the connected user
+   */
+  @Delete("me/profile-picture")
+  @UseGuards(CookieAuthenticationGuard)
+  async deleteProfilePicture(@Req() request: RequestWithUser) {
+    await this.users.deleteProfilePicture(request.user.id);
+    return {
+      message: "Profile picture deleted successfully"
+    };
   }
 
   /**
@@ -59,8 +139,8 @@ export class UsersController {
   @Post("register")
   @UseGuards(AdminGuard)
   async register(@Body() registerUserDto: RegisterUserDto) {
-    const { fullname, email, privilege } = registerUserDto;
-    await this.users.createUser(fullname, email, privilege);
+    const { firstname, lastname, email, privilege } = registerUserDto;
+    await this.users.createUser(firstname, lastname, email, privilege);
     return {
       message: "User successfully registered"
     };
@@ -99,15 +179,6 @@ export class UsersController {
     return {
       message: "Password updated successfully"
     };
-  }
-
-  /**
-   * Resends registration link to unregistered user
-   */
-  @Post(":id/resend")
-  @UseGuards(AdminGuard)
-  async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
-    return await this.users.resendRegistrationLink(id);
   }
 
   /**
@@ -157,6 +228,15 @@ export class UsersController {
   }
 
   /**
+   * Resends registration link to unregistered user
+   */
+  @Post(":id/resend")
+  @UseGuards(AdminGuard)
+  async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
+    return await this.users.resendRegistrationLink(id);
+  }
+
+  /**
    * Gets user data
    */
   @Get(":id")
@@ -174,11 +254,28 @@ export class UsersController {
     @Param("id", ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto
   ) {
-    const { fullname, email, privilege } = updateUserDto;
-    await this.users.updateUser(id, fullname, email, privilege);
+    const { firstname, lastname, email, privilege } = updateUserDto;
+    await this.users.updateUser(id, firstname, lastname, email, privilege);
     return {
       message: "User updated successfully"
     };
+  }
+
+  @Get(":id/profile-picture")
+  @UseGuards(CookieAuthenticationGuard)
+  async getProfilePicture(
+    @Param("id", ParseIntPipe) id: number,
+    @Res() response: Response
+  ) {
+    const buffer = await this.users.getProfilePictureBuffer(id);
+    const { fileTypeFromBuffer } = await import("file-type");
+    const fileType = await fileTypeFromBuffer(buffer);
+    response.setHeader("Content-Type", fileType.mime);
+    response.setHeader(
+      "Content-Disposition",
+      `attachment; filename=profile-picture.${fileType.ext}`
+    );
+    response.send(buffer);
   }
 
   /**

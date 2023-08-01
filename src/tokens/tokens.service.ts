@@ -135,11 +135,18 @@ export class TokensService {
           ? {
               user: {
                 OR: search
+                  .replace(/\s+/g, " ")
                   .trim()
                   .split(" ")
-                  .map((word) => ({
-                    fullname: { contains: word, mode: "insensitive" }
-                  }))
+                  .map((word) => [
+                    {
+                      firstname: { contains: word, mode: "insensitive" }
+                    },
+                    {
+                      lastname: { contains: word, mode: "insensitive" }
+                    }
+                  ])
+                  .flatMap((x) => x) as Prisma.TokenWhereInput[]
               }
             }
           : {}),
@@ -148,7 +155,9 @@ export class TokensService {
       take: limit,
       skip: limit * (page - 1),
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { id: true, fullname: true } } }
+      include: {
+        user: { select: { id: true, firstname: true, lastname: true } }
+      }
     });
 
     return paginatedResponse(tokens, page, limit, count);

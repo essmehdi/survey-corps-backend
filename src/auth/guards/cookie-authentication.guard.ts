@@ -23,7 +23,6 @@ export class CookieAuthenticationGuard implements CanActivate {
         reason: "LOGIN"
       });
     }
-    Logger.debug(request.path);
     if (!request.user.isActive && request.path !== "/users/me") {
       throw new UnauthorizedException({
         statudCode: HttpStatus.UNAUTHORIZED,
