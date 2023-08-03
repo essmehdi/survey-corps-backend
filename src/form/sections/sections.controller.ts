@@ -52,7 +52,10 @@ export class SectionsController {
    */
   @Post()
   async addSection(@Body() addSectionDto: AddSectionDto) {
-    await this.sections.addSection(addSectionDto.title);
+    await this.sections.addSection(
+      addSectionDto.title,
+      addSectionDto.description
+    );
     return {
       message: "Section added succesfully"
     };
@@ -66,7 +69,11 @@ export class SectionsController {
     @Param("section", ParseIntPipe) sectionId: number,
     @Body() editSectionDto: EditSectionDto
   ) {
-    return await this.sections.editSection(sectionId, editSectionDto.title);
+    return await this.sections.editSection(
+      sectionId,
+      editSectionDto.title,
+      editSectionDto.description
+    );
   }
 
   /**

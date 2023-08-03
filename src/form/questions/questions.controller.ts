@@ -61,6 +61,7 @@ export class QuestionsController {
       section,
       addQuestionDto.required,
       addQuestionDto.previous,
+      addQuestionDto.description,
       addQuestionDto.hasOther,
       addQuestionDto.regex
     );
@@ -77,11 +78,13 @@ export class QuestionsController {
     @Param("question", ParseIntPipe) question: number,
     @Body() editQuestionDto: EditQuestionDto
   ) {
-    const { title, type, required, hasOther, regex } = editQuestionDto;
+    const { title, description, type, required, hasOther, regex } =
+      editQuestionDto;
     return await this.questions.editQuestion(
       section,
       question,
       title,
+      description,
       type,
       required,
       hasOther,

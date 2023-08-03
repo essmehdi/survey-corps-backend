@@ -17,6 +17,7 @@ export class QuestionsService {
   public static QUESTION_PROJECTION = {
     id: true,
     title: true,
+    description: true,
     type: true,
     required: true,
     hasOther: true,
@@ -71,12 +72,14 @@ export class QuestionsService {
     sectionId: number,
     required: boolean = false,
     previous: number,
+    description?: string,
     hasOther?: boolean,
     regex?: string
   ) {
     const questionData = {
       title,
       type,
+      description,
       required,
       hasOther,
       regex,
@@ -280,6 +283,7 @@ export class QuestionsService {
     sectionId: number,
     questionId: number,
     title?: string,
+    description?: string,
     type?: QuestionType,
     required?: boolean,
     hasOther?: boolean,
@@ -320,11 +324,12 @@ export class QuestionsService {
         await tx.question.updateMany({
           where: { sectionId, id: questionId },
           data: {
-            ...(typeof title === "string" ? { title } : {}),
-            ...(typeof type === "string" ? { type } : {}),
-            ...(typeof required === "boolean" ? { required } : {}),
-            ...(typeof hasOther === "boolean" ? { hasOther } : {}),
-            ...(regex !== undefined ? { regex } : {})
+            title,
+            type,
+            description,
+            required,
+            hasOther,
+            regex
           }
         });
 

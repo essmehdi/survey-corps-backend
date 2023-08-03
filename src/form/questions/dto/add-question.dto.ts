@@ -18,6 +18,14 @@ export class AddQuestionDto {
   title: string;
 
   /**
+   * Question's descriptionhttp://localhost:3000
+   */
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  description?: string;
+
+  /**
    * Question's type
    */
   @IsEnum(QuestionType)
