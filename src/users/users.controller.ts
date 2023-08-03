@@ -271,10 +271,7 @@ export class UsersController {
     const { fileTypeFromBuffer } = await import("file-type");
     const fileType = await fileTypeFromBuffer(buffer);
     response.setHeader("Content-Type", fileType.mime);
-    response.setHeader(
-      "Content-Disposition",
-      `attachment; filename=profile-picture.${fileType.ext}`
-    );
+    response.setHeader("Content-Disposition", "inline");
     response.send(buffer);
   }
 

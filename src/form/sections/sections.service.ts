@@ -99,10 +99,17 @@ export class SectionsService {
   /**
    * Adds a new section in database
    * @param title Title of the section
-   * @returns
+   * @param description Description of the section
+   * @returns Newly created section
    */
-  async addSection(title: string) {
-    return await this.prisma.questionSection.create({ data: { title } });
+  async addSection(title: string, description?: string) {
+    if (description === "") description = null;
+    return await this.prisma.questionSection.create({
+      data: {
+        title,
+        description: description ?? null
+      }
+    });
   }
 
   /**
@@ -148,11 +155,13 @@ export class SectionsService {
    * Changes section details
    * @param sectionId ID of the section
    * @param title New title for the section
+   * @param description New description for the section
    */
-  async editSection(sectionId: number, title: string) {
+  async editSection(sectionId: number, title?: string, description?: string) {
+    if (description === "") description = null;
     await this.prisma.questionSection.update({
       where: { id: sectionId },
-      data: { title }
+      data: { title, description }
     });
 
     return await this.prisma.questionSection.findUnique({

@@ -19,6 +19,14 @@ export class EditQuestionDto {
   title?: string;
 
   /**
+   * New question's description
+   */
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  description?: string;
+
+  /**
    * New question type
    */
   @IsEnum(QuestionType)

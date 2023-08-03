@@ -60,6 +60,7 @@ model Condition {
 model QuestionSection {
   id               Int               @id @default(autoincrement())
   title            String
+  description      String?
   nextSectionId    Int?
   conditioned      Condition[]       @relation("NextSection")
   questions        Question[]
@@ -70,6 +71,7 @@ model QuestionSection {
 model Question {
   id               Int             @id @default(autoincrement())
   title            String
+  description      String?
   required         Boolean
   type             QuestionType
   hasOther         Boolean?

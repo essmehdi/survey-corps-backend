@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class AddSectionDto {
   /**
@@ -7,4 +7,11 @@ export class AddSectionDto {
   @IsString()
   @IsNotEmpty()
   title: string;
+
+  /**
+   * Section description
+   */
+  @IsString()
+  @IsOptional()
+  description?: string;
 }
