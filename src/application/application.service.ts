@@ -7,7 +7,6 @@ import {
   NotFoundException
 } from "@nestjs/common";
 import { ApplicationStatus, Prisma } from "@prisma/client";
-import { NotFoundError } from "@prisma/client/runtime";
 import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";

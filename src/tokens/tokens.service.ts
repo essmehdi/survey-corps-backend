@@ -2,18 +2,14 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
-  UnauthorizedException
-} from "@nestjs/common";
+  NotFoundException} from "@nestjs/common";
 import {
   Prisma,
-  PrismaClient,
   Privilege,
   Submission,
   Token,
   User
 } from "@prisma/client";
-import { NotFoundError } from "@prisma/client/runtime";
 import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -146,7 +142,7 @@ export class TokensService {
                       lastname: { contains: word, mode: "insensitive" }
                     }
                   ])
-                  .flatMap((x) => x) as Prisma.TokenWhereInput[]
+                  .flatMap((x) => x) as Prisma.UserWhereInput[]
               }
             }
           : {}),

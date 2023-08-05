@@ -16,10 +16,10 @@ import { paginatedResponse } from "src/utils/response";
 import { convertToTsquery } from "src/utils/strings";
 import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import * as bcrypt from "bcrypt";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 @Injectable()
 export class UsersService {
