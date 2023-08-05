@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   ValidateIf
 } from "class-validator";
 
@@ -15,6 +17,7 @@ export class AddQuestionDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(150)
   title: string;
 
   /**
@@ -23,6 +26,7 @@ export class AddQuestionDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(500)
   description?: string;
 
   /**
@@ -49,6 +53,7 @@ export class AddQuestionDto {
    */
   @IsString()
   @IsOptional()
+  @MaxLength(300)
   regex?: string;
 
   /**
@@ -57,10 +62,4 @@ export class AddQuestionDto {
   @IsNumber()
   @ValidateIf((_, v) => v !== null)
   previous: number | null;
-
-  // @ValidateIf(o => o.type !== 'FREEFIELD')
-  // @IsArray()
-  // @ValidateNested({ each: true })
-  // @ArrayNotEmpty()
-  // answers: AddAnswerDto[];
 }

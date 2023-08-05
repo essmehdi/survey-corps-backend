@@ -4,7 +4,8 @@ import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
-  IsString
+  IsString,
+  MaxLength
 } from "class-validator";
 
 export class RegisterUserDto {
@@ -13,6 +14,7 @@ export class RegisterUserDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   firstname: string;
 
   /**
@@ -20,6 +22,7 @@ export class RegisterUserDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   lastname: string;
 
   /**
@@ -27,6 +30,7 @@ export class RegisterUserDto {
    */
   @IsEmail()
   @IsNotEmpty()
+  @MaxLength(150)
   email: string;
 
   /**

@@ -1,9 +1,10 @@
-import { IsNotEmpty, IsString, Matches, MinLength } from "class-validator";
+import { IsNotEmpty, IsString, Matches, MaxLength, MinLength } from "class-validator";
 import { Match } from "src/utils/validators";
 
 export class RegisterUserPasswordDto {
   @IsString()
   @MinLength(10)
+  @MaxLength(250)
   @IsNotEmpty()
   password: string;
 

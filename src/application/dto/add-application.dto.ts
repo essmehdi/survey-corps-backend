@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, Max } from "class-validator";
 
 export class CreateApplicationDto {
   /**
@@ -6,6 +6,7 @@ export class CreateApplicationDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   fullname: string;
 
   /**
@@ -13,5 +14,6 @@ export class CreateApplicationDto {
    */
   @IsEmail()
   @IsNotEmpty()
+  @MaxLength(150)
   email: string;
 }

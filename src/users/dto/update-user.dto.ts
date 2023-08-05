@@ -3,7 +3,8 @@ import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
-  IsString
+  IsString,
+  MaxLength
 } from "class-validator";
 import { RegisterUserDto } from "./register-user.dto";
 import { Privilege } from "@prisma/client";
@@ -15,6 +16,7 @@ export class UpdateUserDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(100)
   firstname: string;
 
   /**
@@ -23,6 +25,7 @@ export class UpdateUserDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(100)
   lastname: string;
 
   /**
@@ -31,6 +34,7 @@ export class UpdateUserDto {
   @IsEmail()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(150)
   email: string;
 
   /**

@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { IsNotEmpty, IsString, IsUUID, ValidateNested } from "class-validator";
 import { SubmissionDto } from "./submission.dto";
 
 export class AddSubmissionDto {
@@ -15,5 +15,6 @@ export class AddSubmissionDto {
    */
   @IsString()
   @IsNotEmpty()
+  @IsUUID(4)
   token: string;
 }

@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   ValidateIf
 } from "class-validator";
 
@@ -16,6 +18,7 @@ export class EditQuestionDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(150)
   title?: string;
 
   /**
@@ -24,6 +27,7 @@ export class EditQuestionDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(500)
   description?: string;
 
   /**
@@ -54,5 +58,6 @@ export class EditQuestionDto {
   @ValidateIf((o) => o.type === "FREEFIELD")
   @IsString()
   @IsOptional()
+  @MaxLength(300)
   regex?: string | null;
 }
