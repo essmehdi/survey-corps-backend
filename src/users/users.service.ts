@@ -121,7 +121,7 @@ export class UsersService {
   }
 
   private checkPasswordStrength(password: string) {
-    return zxcvbn(password).score === 4;
+    return zxcvbn(password).score >= 3;
   }
 
   async getAllUsers(
@@ -308,7 +308,7 @@ export class UsersService {
    */
   async registerUserPassword(token: string, password: string) {
     if (!this.checkPasswordStrength(password)) {
-      throw new BadRequestException("The password is too weak");
+      throw new BadRequestException("A strong password is required");
     }
     try {
       const t = await this.xprisma.registrationToken.findUniqueOrThrow({
@@ -440,7 +440,7 @@ export class UsersService {
    */
   async resetUserPassword(token: string, password: string) {
     if (!this.checkPasswordStrength(password)) {
-      throw new BadRequestException("The password is too weak");
+      throw new BadRequestException("A strong password is required");
     }
     try {
       const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
