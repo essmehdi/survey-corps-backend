@@ -9,14 +9,14 @@ export class PaginationQueryDto {
   @Type(() => Number)
   @Min(1)
   @IsOptional()
-  page: number;
+  page?: number;
 
   /**
    * Number of elements in a single page
    */
   @IsNumber()
   @Type(() => Number)
-  @Min(10)
+  @Min(1)
   @IsOptional()
-  limit: number;
+  limit?: number;
 }

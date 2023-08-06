@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
-import { IsEnum, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
 
 export enum PrivilegeFilter {
   ALL = "ALL",
@@ -7,25 +8,7 @@ export enum PrivilegeFilter {
   MEMBER = "MEMBER"
 }
 
-export class UsersQueryDto {
-  /**
-   * Page number
-   */
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  @IsOptional()
-  page?: number;
-
-  /**
-   * Number of elements in a single page
-   */
-  @IsNumber()
-  @Type(() => Number)
-  @Min(10)
-  @IsOptional()
-  limit?: number;
-
+export class UsersQueryDto extends PaginationQueryDto {
   /**
    * Filter by user privilege
    */
@@ -38,5 +21,6 @@ export class UsersQueryDto {
    */
   @IsString()
   @IsOptional()
+  @MaxLength(300)
   search?: string;
 }

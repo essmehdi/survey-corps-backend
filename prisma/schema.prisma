@@ -33,11 +33,11 @@ model ForgotPasswordToken {
 
 model User {
   id                  Int                  @id @default(autoincrement())
-  firstname           String
-  lastname            String
-  email               String               @unique
+  firstname           String               @db.VarChar(100)
+  lastname            String               @db.VarChar(100)
+  email               String               @unique @db.VarChar(150)
   profilePicture      Bytes?
-  password            String?
+  password            String?              @db.VarChar(250)
   privilege           Privilege            @default(MEMBER)
   isActive            Boolean              @default(false)
   tokens              Token[]
@@ -59,8 +59,8 @@ model Condition {
 
 model QuestionSection {
   id               Int               @id @default(autoincrement())
-  title            String
-  description      String?
+  title            String            @db.VarChar(150)
+  description      String?           @db.VarChar(500)
   nextSectionId    Int?
   conditioned      Condition[]       @relation("NextSection")
   questions        Question[]
@@ -70,12 +70,12 @@ model QuestionSection {
 
 model Question {
   id               Int             @id @default(autoincrement())
-  title            String
-  description      String?
+  title            String          @db.VarChar(150)
+  description      String?         @db.VarChar(500)
   required         Boolean
   type             QuestionType
   hasOther         Boolean?
-  regex            String?
+  regex            String?         @db.VarChar(300)
   nextQuestionId   Int?            @unique
   sectionId        Int
   answers          Answer[]
@@ -88,7 +88,7 @@ model Question {
 
 model Answer {
   id          Int          @id @default(autoincrement())
-  title       String
+  title       String       @db.VarChar(100)
   questionId  Int
   question    Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
   condition   Condition?
@@ -101,7 +101,7 @@ model Submission {
   id           Int      @id @default(autoincrement())
   questionId   Int
   answerId     Int?
-  other        String?
+  other        String?  @db.VarChar(500)
   submittedAt  DateTime @default(now())
   submissionId String
   answer       Answer?  @relation(fields: [answerId], references: [id], onDelete: NoAction)
@@ -122,8 +122,8 @@ model Token {
 
 model Application {
   id        Int               @id @default(autoincrement())
-  fullname  String
-  email     String            @unique
+  fullname  String            @db.VarChar(200)
+  email     String            @unique @db.VarChar(150)
   createdAt DateTime          @default(now())
   status    ApplicationStatus @default(PENDING)
   tokenId   Int?              @unique

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, Max, MaxLength } from "class-validator";
 import { AddSectionDto } from "./add-section.dto";
 
 export class EditSectionDto {
@@ -8,6 +8,7 @@ export class EditSectionDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @MaxLength(150)
   title?: string;
 
   /**
@@ -15,5 +16,6 @@ export class EditSectionDto {
    */
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   description?: string;
 }

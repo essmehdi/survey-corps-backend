@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsString, MaxLength } from "class-validator";
 
 export class UpdatePersonalDataDto {
   /**
@@ -6,6 +6,7 @@ export class UpdatePersonalDataDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   firstname: string;
 
   /**
@@ -13,5 +14,6 @@ export class UpdatePersonalDataDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   lastname: string;
 }

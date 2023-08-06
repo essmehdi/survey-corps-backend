@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -16,10 +17,13 @@ import { paginatedResponse } from "src/utils/response";
 import { convertToTsquery } from "src/utils/strings";
 import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import * as bcrypt from "bcrypt";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core'
+import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
+import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
 
 @Injectable()
 export class UsersService {
@@ -27,6 +31,14 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
   private static readonly PASSWORD_RESET_TOKEN_LIFESPAN = 86400000; // 1 days
+  private static readonly PASSWORD_CHECKER_OPTIONS = {
+    translations: zxcvbnEnPackage.translations,
+    graphs: zxcvbnCommonPackage.adjacencyGraphs,
+    dictionary: {
+      ...zxcvbnCommonPackage.dictionary,
+      ...zxcvbnEnPackage.dictionary,
+    }
+  }
   private static PUBLIC_PROJECTION = {
     id: true,
     firstname: true,
@@ -79,6 +91,7 @@ export class UsersService {
         }
       }
     });
+    zxcvbnOptions.setOptions(UsersService.PASSWORD_CHECKER_OPTIONS);
   }
 
   private handleQueryException(error: any) {
@@ -105,6 +118,10 @@ export class UsersService {
 
   private getFullname(user: User) {
     return `${user.firstname} ${user.lastname}`;
+  }
+
+  private checkPasswordStrength(password: string) {
+    return zxcvbn(password).score >= 3;
   }
 
   async getAllUsers(
@@ -290,6 +307,9 @@ export class UsersService {
    * Completes user registration by setting a password
    */
   async registerUserPassword(token: string, password: string) {
+    if (!this.checkPasswordStrength(password)) {
+      throw new BadRequestException("A strong password is required");
+    }
     try {
       const t = await this.xprisma.registrationToken.findUniqueOrThrow({
         where: { token },
@@ -419,6 +439,9 @@ export class UsersService {
    * Reset user password using password reset token
    */
   async resetUserPassword(token: string, password: string) {
+    if (!this.checkPasswordStrength(password)) {
+      throw new BadRequestException("A strong password is required");
+    }
     try {
       const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
         where: { token },
