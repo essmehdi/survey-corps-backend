@@ -52,13 +52,10 @@ export class SectionsController {
    */
   @Post()
   async addSection(@Body() addSectionDto: AddSectionDto) {
-    await this.sections.addSection(
+    return await this.sections.addSection(
       addSectionDto.title,
       addSectionDto.description
     );
-    return {
-      message: "Section added succesfully"
-    };
   }
 
   /**
