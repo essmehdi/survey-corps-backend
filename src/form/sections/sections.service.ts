@@ -52,7 +52,7 @@ export class SectionsService {
           answers: {}
         };
         conditions.forEach((condition) => {
-          next.answers[condition.answerId] = condition.nextSectionId;
+          next.answers[condition.answerId ?? -1] = condition.nextSectionId;
         });
       }
     }
@@ -237,10 +237,6 @@ export class SectionsService {
       const conditioned = await this.prisma.question.findFirst({
         where: { conditions: { some: {} }, section: { id } }
       });
-      if (conditioned)
-        throw new ConflictException(
-          "A conditional question already exists for this section"
-        );
 
       // Validate the input
       const question = await this.prisma.question.findFirstOrThrow({
@@ -257,8 +253,22 @@ export class SectionsService {
 
       // Check if answers are correct
       const answersIds = question.answers.map((a) => a.id);
+
+      if (question.hasOther) {
+        answersIds.push(-1); // -1 represents the "other" answer
+      }
+
+      // Check if all answers are provided
+      const answers = Object.keys(condition.answers);
+
+      if (answers.length !== answersIds.length) {
+        throw new BadRequestException(
+          "The number of answers provided does not match the number of answers in the question"
+        );
+      }
+
       if (
-        !Object.keys(condition.answers).every((answer) => {
+        !answers.every((answer) => {
           // Check if any answer does point to the same question section
           if (condition.answers[answer] === question.section.id)
             throw new ConflictException(
@@ -274,6 +284,16 @@ export class SectionsService {
 
       // Create the conditions
       await this.prisma.$transaction(async (tx) => {
+        if (conditioned) {
+          await tx.condition.deleteMany({
+            where: {
+              question: {
+                section: { id }
+              }
+            }
+          });
+        }
+
         await tx.question.update({
           where: { id: condition.question },
           data: {
@@ -285,7 +305,7 @@ export class SectionsService {
           data: Object.entries(condition.answers).map(([answer, section]) => {
             return {
               nextSectionId: section,
-              answerId: +answer,
+              answerId: answer !== "-1" ? +answer : null,
               questionId: condition.question
             };
           })

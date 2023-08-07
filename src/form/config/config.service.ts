@@ -129,7 +129,7 @@ export class FormConfigService {
       }
       if (
         question.conditions.length > 0 &&
-        question.conditions.length !== question.answers.length
+        question.conditions.length < question.answers.length
       ) {
         return {
           valid: false,
