@@ -211,12 +211,7 @@ export class SubmissionsService {
                 }
                 await this.addSingleAnswerSubmission(tx, submissionId, answer);
               } else {
-                if (question.regex) {
-                  if (!new RegExp(question.regex).test(answer.other))
-                    throw new BadRequestException(
-                      `Answer for question #${question.id} does not match the regular expression`
-                    );
-                }
+                this.validateOtherAnswer(question, answer.other);
                 await this.addOtherAnswerSubmission(tx, submissionId, answer);
               }
             } else {

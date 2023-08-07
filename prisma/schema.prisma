@@ -48,13 +48,11 @@ model User {
 model Condition {
   id            Int             @id @default(autoincrement())
   questionId    Int
-  answerId      Int             @unique
+  answerId      Int?            @unique
   nextSectionId Int
-  answer        Answer          @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  answer        Answer?         @relation(fields: [answerId], references: [id], onDelete: Cascade)
   nextSection   QuestionSection @relation("NextSection", fields: [nextSectionId], references: [id], onDelete: Cascade)
   question      Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  @@unique([questionId, answerId])
 }
 
 model QuestionSection {
