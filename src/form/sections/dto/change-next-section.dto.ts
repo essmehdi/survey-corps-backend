@@ -17,7 +17,7 @@ export enum NextSectionType {
   CONDITION = "CONDITION"
 }
 
-function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
+function IsAnswerIdToSectionIdObject(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
       name: "isNumberToNumberObject",
@@ -28,7 +28,7 @@ function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
       validator: {
         validate(value: any) {
           return (
-            Object.keys(value).every(Number.isNaN) &&
+            Object.keys(value).every((v) => Number.isNaN(v) || v === "other") &&
             Object.values(value).every(Number.isNaN)
           );
         }
@@ -49,8 +49,8 @@ export class ConditionDto {
    * Mapping of the answers and next section
    */
   @IsObject()
-  @IsNumberToNumberObject()
-  answers: Record<number, number>;
+  @IsAnswerIdToSectionIdObject()
+  answers: Record<number | "other", number>;
 }
 
 export class ChangeNextSectionDto {

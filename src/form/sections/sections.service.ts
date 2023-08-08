@@ -52,7 +52,7 @@ export class SectionsService {
           answers: {}
         };
         conditions.forEach((condition) => {
-          next.answers[condition.answerId ?? -1] = condition.nextSectionId;
+          next.answers[condition.answerId ?? "other"] = condition.nextSectionId;
         });
       }
     }
@@ -252,29 +252,31 @@ export class SectionsService {
       }
 
       // Check if answers are correct
-      const answersIds = question.answers.map((a) => a.id);
+      const answersIds: (number | "other")[] = question.answers.map(
+        (a) => a.id
+      );
 
       if (question.hasOther) {
-        answersIds.push(-1); // -1 represents the "other" answer
+        answersIds.push("other"); // -1 represents the "other" answer
       }
 
       // Check if all answers are provided
-      const answers = Object.keys(condition.answers);
+      const providedAnswers = Object.keys(condition.answers);
 
-      if (answers.length !== answersIds.length) {
+      if (providedAnswers.length !== answersIds.length) {
         throw new BadRequestException(
           "The number of answers provided does not match the number of answers in the question"
         );
       }
 
       if (
-        !answers.every((answer) => {
+        !providedAnswers.every((answer) => {
           // Check if any answer does point to the same question section
           if (condition.answers[answer] === question.section.id)
             throw new ConflictException(
               "You cannot point on the section itself"
             );
-          return answersIds.includes(+answer);
+          return answersIds.includes(answer !== "other" ? +answer : "other");
         })
       ) {
         throw new NotFoundException(
@@ -305,7 +307,7 @@ export class SectionsService {
           data: Object.entries(condition.answers).map(([answer, section]) => {
             return {
               nextSectionId: section,
-              answerId: answer !== "-1" ? +answer : null,
+              answerId: answer !== "other" ? +answer : null,
               questionId: condition.question
             };
           })
