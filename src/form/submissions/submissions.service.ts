@@ -114,6 +114,7 @@ export class SubmissionsService {
     token: string
   ) {
     const submissionId = randomUUID();
+    // Begin transaction
     await this.prisma.$transaction(async (tx) => {
       var currentSection: QuestionSection = null;
       var nextSectionId = null;
@@ -255,6 +256,10 @@ export class SubmissionsService {
     });
   }
 
+  /**
+   * Adds a form submission to the database
+   * @param addSubmissionDto The submission data
+   */
   async addSubmission(addSubmissionDto: AddSubmissionDto) {
     try {
       // Check if token exists
@@ -279,9 +284,5 @@ export class SubmissionsService {
       addSubmissionDto.submissions,
       addSubmissionDto.token
     );
-
-    return {
-      message: "Submission saved successfully"
-    };
   }
 }

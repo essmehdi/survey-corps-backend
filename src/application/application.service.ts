@@ -3,39 +3,22 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  LoggerService,
   NotFoundException
 } from "@nestjs/common";
 import { ApplicationStatus, Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
-import { TokensService } from "src/tokens/tokens.service";
 import { StatusOptions } from "./dto/applications-query.dto";
-import { paginatedResponse } from "src/utils/response";
 import { MailService } from "src/mail/mail.service";
 
 @Injectable()
 export class ApplicationService {
   private readonly logger = new Logger(ApplicationService.name);
-  private static PUBLIC_PROJECTION = {
-    id: true,
-    fullname: true,
-    email: true,
-    status: true
-  };
-  private static ALL_PROJECTION = {
-    id: true,
-    fullname: true,
-    email: true,
-    status: true,
-    tokenId: true
-  };
 
   constructor(
     private prisma: PrismaService,
-    private mail: MailService,
-    private tokens: TokensService
+    private mail: MailService
   ) {}
 
   private handleQueryException(error: any) {
@@ -88,8 +71,7 @@ export class ApplicationService {
   async addApplication(fullname: string, email: string) {
     try {
       return await this.prisma.application.create({
-        data: { fullname, email },
-        select: { id: true, fullname: true, email: true, status: true }
+        data: { fullname, email }
       });
     } catch (error) {
       this.handleQueryException(error);
@@ -99,12 +81,12 @@ export class ApplicationService {
   /**
    * Gets application based on criteria
    */
-  async getApplications(
+  async getApplicationsPage(
     status: StatusOptions,
     page: number = 1,
     limit: number = 10
   ) {
-    const [applications, count] = await this.getApplicationsAndCount({
+    return await this.getApplicationsAndCount({
       ...(status === StatusOptions.ALL
         ? {}
         : status === StatusOptions.RESPONDED
@@ -114,17 +96,13 @@ export class ApplicationService {
       take: limit,
       orderBy: { createdAt: "desc" }
     });
-
-    return paginatedResponse(applications, page, limit, count);
   }
 
   /**
    * Gets all the submitted applications
    */
   async getAllApplications() {
-    return await this.prisma.application.findMany({
-      select: ApplicationService.PUBLIC_PROJECTION
-    });
+    return await this.prisma.application.findMany();
   }
 
   /**
@@ -165,7 +143,6 @@ export class ApplicationService {
         );
         return application;
       });
-      delete app["token"];
       return app;
     } catch (error) {
       this.handleQueryException(error);

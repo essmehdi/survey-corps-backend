@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -13,10 +15,13 @@ import {
 import { AddAnswerDto } from "./dto/add-answer.dto";
 import { AnswersService } from "./answers.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { EditAnswerDto } from "./dto/edit-answer.dto";
 import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
 import { EditInterceptor } from "../interceptors/edit.interceptor";
+import { MessageDto } from "src/utils/dto/message.dto";
+import { AnswerDto } from "./dto/answer.dto";
+import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
 
 @ApiTags("Admin form", "Answers")
 @Controller("admin/sections/:section/questions/:question/answers")
@@ -30,6 +35,11 @@ export class AnswersController {
    * Gets question answers
    */
   @Get("")
+  @UseInterceptors(new TransformDataInterceptor(AnswerDto))
+  @ApiOkResponse({
+    type: AnswerDto,
+    isArray: true
+  })
   async getAnswers(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number
@@ -41,6 +51,10 @@ export class AnswersController {
    * Gets an answer by ID
    */
   @Get(":answer")
+  @UseInterceptors(new TransformDataInterceptor(AnswerDto))
+  @ApiOkResponse({
+    type: AnswerDto
+  })
   async getAnswer(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
@@ -53,26 +67,27 @@ export class AnswersController {
    * Adds an answer to a question
    */
   @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new TransformDataInterceptor(AnswerDto))
+  @ApiCreatedResponse({
+    type: AnswerDto
+  })
   async addAnswer(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
     @Body() addAnswerDto: AddAnswerDto
   ) {
-    const answer = await this.answers.addAnswer(
-      section,
-      question,
-      addAnswerDto.title
-    );
-    return {
-      id: answer.id,
-      title: answer.title
-    };
+    return await this.answers.addAnswer(section, question, addAnswerDto.title);
   }
 
   /**
    * Edits an answer
    */
   @Patch(":answer")
+  @UseInterceptors(new TransformDataInterceptor(AnswerDto))
+  @ApiOkResponse({
+    type: AnswerDto
+  })
   async editAnswer(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
@@ -91,7 +106,7 @@ export class AnswersController {
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
     @Param("answer", ParseIntPipe) answer: number
-  ) {
+  ): Promise<MessageDto> {
     await this.answers.deleteAnswer(section, question, answer);
     return {
       message: "Answer successfully deleted"

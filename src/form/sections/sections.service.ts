@@ -88,7 +88,6 @@ export class SectionsService {
           ),
           next: await this.getSectionNext(section)
         };
-        delete finalSection["nextSectionId"];
         return finalSection;
       })
     );
@@ -121,7 +120,7 @@ export class SectionsService {
       });
       return this.section(firstSection.id);
     } catch (error) {
-      return new InternalServerErrorException(
+      throw new InternalServerErrorException(
         "Could not determine first section"
       );
     }
@@ -138,10 +137,9 @@ export class SectionsService {
       });
 
       const next = this.getSectionNext(result);
-      const { nextSectionId, ...strippedResult } = result;
 
       return {
-        ...strippedResult,
+        ...result,
         questions: await this.questions.getQuestionsBySectionInOrder(sectionId),
         next
       };
@@ -206,7 +204,7 @@ export class SectionsService {
           }
         });
 
-        return await tx.questionSection.update({
+        await tx.questionSection.update({
           where: { id },
           data: {
             nextSection: {
@@ -324,10 +322,6 @@ export class SectionsService {
           });
         }
       });
-
-      return {
-        message: "Conditions added successfully"
-      };
     } catch (error) {
       this.handleQueryException(error);
     }

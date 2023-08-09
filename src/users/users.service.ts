@@ -8,12 +8,11 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { Prisma, PrismaClient, Privilege, User } from "@prisma/client";
+import { Prisma, PrismaPromise, Privilege, User } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaError } from "prisma-error-enum";
 import { PrivilegeFilter } from "./dto/users-query.dto";
-import { paginatedResponse } from "src/utils/response";
 import { convertToTsquery } from "src/utils/strings";
 import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
@@ -21,13 +20,13 @@ import * as bcrypt from "bcrypt";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core'
-import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
-import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
+import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
+import * as zxcvbnCommonPackage from "@zxcvbn-ts/language-common";
+import * as zxcvbnEnPackage from "@zxcvbn-ts/language-en";
 
 @Injectable()
 export class UsersService {
-  private xprisma: any;
+  private xprisma: ReturnType<typeof this.getExtendedClient>;
   private readonly logger = new Logger(UsersService.name);
   private static readonly REGISTRATION_TOKEN_LIFESPAN = 259200000; // 3 days
   private static readonly PASSWORD_RESET_TOKEN_LIFESPAN = 86400000; // 1 days
@@ -36,41 +35,8 @@ export class UsersService {
     graphs: zxcvbnCommonPackage.adjacencyGraphs,
     dictionary: {
       ...zxcvbnCommonPackage.dictionary,
-      ...zxcvbnEnPackage.dictionary,
+      ...zxcvbnEnPackage.dictionary
     }
-  }
-  private static PUBLIC_PROJECTION = {
-    id: true,
-    firstname: true,
-    lastname: true,
-    email: true,
-    isActive: true,
-    registered: true,
-    _count: {
-      select: {
-        tokens: {
-          where: {
-            submitted: true
-          }
-        }
-      }
-    }
-  };
-  private static PASSWORD_PROJECTION = {
-    password: true
-  };
-  private static PRIVILEGE_PROJECTION = {
-    privilege: true
-  };
-  private static PRIVATE_PROJECTION = {
-    ...UsersService.PUBLIC_PROJECTION,
-    ...UsersService.PRIVILEGE_PROJECTION
-  };
-
-  private static ALL_PROJECTION = {
-    ...UsersService.PUBLIC_PROJECTION,
-    ...UsersService.PASSWORD_PROJECTION,
-    ...UsersService.PRIVILEGE_PROJECTION
   };
 
   constructor(
@@ -78,7 +44,17 @@ export class UsersService {
     private config: ConfigService,
     private mail: MailService
   ) {
-    this.xprisma = prisma.$extends({
+    this.xprisma = this.getExtendedClient();
+    zxcvbnOptions.setOptions(UsersService.PASSWORD_CHECKER_OPTIONS);
+  }
+
+  /**
+   * Returns a Prisma client with new fields:
+   *  - "registered" to know if the user has registered using the link
+   * @returns A Prisma client with extended user
+   */
+  private getExtendedClient() {
+    return this.prisma.$extends({
       name: "UserExtendedPrismaClient",
       result: {
         user: {
@@ -91,9 +67,11 @@ export class UsersService {
         }
       }
     });
-    zxcvbnOptions.setOptions(UsersService.PASSWORD_CHECKER_OPTIONS);
   }
 
+  /**
+   * Handle service query exception
+   */
   private handleQueryException(error: any) {
     this.logger.error(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -109,25 +87,41 @@ export class UsersService {
     throw new InternalServerErrorException("An error has occured");
   }
 
+  /**
+   * Returns matching users and the total users count
+   * @param userFindManyArgs Prisma client args (findMany)
+   * @returns The list of the users and the total count
+   */
   private async getUsersAndCount(userFindManyArgs: Prisma.UserFindManyArgs) {
     return await this.xprisma.$transaction([
-      this.xprisma.user.findMany(userFindManyArgs),
+      this.xprisma.user.findMany(userFindManyArgs) as PrismaPromise<
+        (User & { _count?: any })[]
+      >,
       this.xprisma.user.count({ where: userFindManyArgs.where })
     ]);
   }
 
-  private getFullname(user: User) {
-    return `${user.firstname} ${user.lastname}`;
-  }
-
+  /**
+   * Checks the password strength using "zxcvbn"
+   * @param password The password
+   * @returns True if the score is greater than or equal 3
+   */
   private checkPasswordStrength(password: string) {
     return zxcvbn(password).score >= 3;
   }
 
-  async getAllUsers(
+  /**
+   * Gets a page from the list of users
+   * @param privilegeFilter A filter by privilege
+   * @param page Page number
+   * @param limit Page size
+   * @param search Search term
+   * @returns Page from users list
+   */
+  async getAllUsersPage(
     privilegeFilter: PrivilegeFilter,
-    page: number = 1,
-    limit: number = 30,
+    page: number,
+    limit: number,
     search?: string
   ) {
     try {
@@ -136,8 +130,8 @@ export class UsersService {
           ? { privilege: privilegeFilter }
           : {};
 
-      const tsquery = convertToTsquery(search);
       if (search) {
+        const tsquery = convertToTsquery(search);
         whereQuery.OR = [
           { firstname: { search: tsquery } },
           { lastname: { search: tsquery } },
@@ -145,61 +139,70 @@ export class UsersService {
         ];
       }
 
-      const [users, count] = await this.getUsersAndCount({
+      return await this.getUsersAndCount({
         where: whereQuery,
         take: limit,
         skip: limit * (page - 1),
-        orderBy: { id: "asc" },
-        select: UsersService.PRIVATE_PROJECTION
+        orderBy: { id: "asc" }
       });
-
-      return paginatedResponse(users, page, limit, count);
     } catch (error) {
       this.handleQueryException(error);
     }
   }
 
-  async getUserById(id: number, allFields: boolean = false) {
+  /**
+   * Gets a user by id
+   * @param id User id
+   * @returns The user
+   */
+  async getUserById(id: number) {
     try {
       return await this.xprisma.user.findUniqueOrThrow({
-        where: { id },
-        select: allFields
-          ? UsersService.ALL_PROJECTION
-          : UsersService.PRIVATE_PROJECTION
+        where: { id }
       });
     } catch (error) {
       this.handleQueryException(error);
     }
   }
 
-  async getUserByEmail(email: string, allFields: boolean = false) {
+  /**
+   * Gets a user by email
+   * @param email User email
+   * @returns The user
+   */
+  async getUserByEmail(email: string) {
     try {
       return await this.xprisma.user.findUniqueOrThrow({
-        where: { email },
-        select: allFields
-          ? UsersService.ALL_PROJECTION
-          : UsersService.PRIVATE_PROJECTION
+        where: { email }
       });
     } catch (error) {
       this.handleQueryException(error);
     }
   }
 
+  /**
+   * Updates user info
+   * @param id User id to update
+   * @param firstname New firstname
+   * @param lastname New lastname
+   * @param email New email
+   * @param privilege New privilege
+   */
   async updateUser(
     id: number,
-    firstname: string,
-    lastname: string,
-    email: string,
+    firstname?: string,
+    lastname?: string,
+    email?: string,
     privilege?: Privilege
   ) {
     try {
-      await this.xprisma.user.update({
+      return await this.xprisma.user.update({
         where: { id },
         data: {
-          ...(firstname ? { firstname } : {}),
-          ...(lastname ? { lastname } : {}),
-          ...(email ? { email } : {}),
-          ...(privilege ? { privilege } : {})
+          firstname,
+          lastname,
+          email,
+          privilege
         }
       });
     } catch (error) {
@@ -207,15 +210,20 @@ export class UsersService {
     }
   }
 
-  async getLeaderboard(page: number = 1, limit: number = 30) {
-    const [leaderboard, count] = await this.getUsersAndCount({
+  /**
+   * Gets a leaderboard page (ranked by tokens submitted)
+   * @param page Page number
+   * @param limit Page size
+   * @returns The leaderboard page and the total count
+   */
+  async getLeaderboardPage(page: number, limit: number) {
+    return await this.getUsersAndCount({
       where: {
         tokens: {
           some: {}
         }
       },
-      select: {
-        ...UsersService.PUBLIC_PROJECTION,
+      include: {
         _count: {
           select: {
             tokens: {
@@ -225,22 +233,25 @@ export class UsersService {
             }
           }
         }
+      },
+      take: limit,
+      skip: limit * (page - 1),
+      orderBy: {
+        tokens: {
+          _count: "desc"
+        }
       }
     });
-
-    return paginatedResponse(
-      leaderboard.map(({ firstname, lastname, email, _count }) => ({
-        firstname,
-        lastname,
-        email,
-        count: _count.tokens
-      })),
-      page,
-      limit,
-      count
-    );
   }
 
+  /**
+   * Creates a new user & sends a registration email to user's email
+   * @param firstname User's firstname
+   * @param lastname User's lastname
+   * @param email User's email
+   * @param privilege User's privilege
+   * @returns The newly created user
+   */
   async createUser(
     firstname: string,
     lastname: string,
@@ -249,7 +260,7 @@ export class UsersService {
   ) {
     const token = randomUUID();
     try {
-      await this.xprisma.$transaction(async (tx) => {
+      return await this.xprisma.$transaction(async (tx) => {
         // Create the user
         const newUser = await tx.user.create({
           data: {
@@ -264,14 +275,22 @@ export class UsersService {
             }
           }
         });
+
         // Send mail
         await this.mail.sendRegistrationEmail(email, newUser.firstname, token);
+
+        return newUser;
       });
     } catch (error) {
       this.handleQueryException(error);
     }
   }
 
+  /**
+   * Verifies if a registration token is valid
+   * @param token The token
+   * @returns An object with "valid" field & "expired" field if it is not valid
+   */
   async verifyRegistrationToken(token: string) {
     try {
       const t = await this.xprisma.registrationToken.findUniqueOrThrow({
@@ -305,6 +324,8 @@ export class UsersService {
 
   /**
    * Completes user registration by setting a password
+   * @param token The registration token
+   * @param password The user provided password
    */
   async registerUserPassword(token: string, password: string) {
     if (!this.checkPasswordStrength(password)) {
@@ -377,7 +398,9 @@ export class UsersService {
   }
 
   /**
-   * Verify password reset token
+   * Verifies password reset token
+   * @param token The password reset token
+   * @returns An object with "valid" field & "expired" field if it is not valid
    */
   async verifyForgotPasswordToken(token: string) {
     try {
@@ -409,6 +432,7 @@ export class UsersService {
 
   /**
    * Send a password reset link to the user
+   * @param email The email to send the link to
    */
   async sendPasswordResetLink(email: string) {
     const presentToken = await this.prisma.forgotPasswordToken.findFirst({
@@ -437,6 +461,8 @@ export class UsersService {
 
   /**
    * Reset user password using password reset token
+   * @param token The password reset token
+   * @param password The new password
    */
   async resetUserPassword(token: string, password: string) {
     if (!this.checkPasswordStrength(password)) {
@@ -516,6 +542,8 @@ export class UsersService {
 
   /**
    * Gets a user profile picture
+   * @param userId User id
+   * @returns The buffer array of the picture
    */
   async getProfilePictureBuffer(userId: number) {
     try {
@@ -538,6 +566,8 @@ export class UsersService {
 
   /**
    * Changes user profile picture
+   * @param userId User id
+   * @param buffer The new picture buffer
    */
   async updateProfilePicture(userId: number, buffer: Buffer) {
     try {
@@ -554,6 +584,7 @@ export class UsersService {
 
   /**
    * Deletes user profile picture
+   * @param userId User id
    */
   async deleteProfilePicture(userId: number) {
     try {

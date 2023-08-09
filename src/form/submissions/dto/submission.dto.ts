@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   IsNotEmpty,
@@ -28,6 +28,17 @@ export class SubmissionDto {
    */
   @Validate(isNumberOrArrayOfNumbers, {
     message: "Field must be a number or an array of numbers"
+  })
+  @ApiPropertyOptional({
+    oneOf: [
+      { type: "number" },
+      {
+        type: "array",
+        items: {
+          type: "number"
+        }
+      }
+    ]
   })
   answerId?: number | number[];
 

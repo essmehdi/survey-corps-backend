@@ -2,14 +2,17 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
   Post,
   Query,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { ApplicationStatus } from "@prisma/client";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { ApplicationService } from "./application.service";
@@ -18,6 +21,9 @@ import {
   ApplicationsQueryDto,
   StatusOptions
 } from "./dto/applications-query.dto";
+import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { ApplicationDto } from "./dto/application.dto";
+import { PaginatedResponseDto } from "src/utils/dto/paginated-response.dto";
 
 @ApiTags("Alumni application")
 @Controller()
@@ -28,6 +34,11 @@ export class ApplicationController {
    * Sends an application for the form
    */
   @Post("applications")
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new TransformDataInterceptor(ApplicationDto))
+  @ApiOkResponse({
+    type: ApplicationDto
+  })
   async apply(@Body() applicationDto: CreateApplicationDto) {
     const { fullname, email } = applicationDto;
     return await this.applications.addApplication(fullname, email);
@@ -38,9 +49,19 @@ export class ApplicationController {
    */
   @Get("admin/applications")
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(ApplicationDto))
+  @ApiOkResponse({
+    type: ApplicationDto,
+    isArray: true
+  })
   async getAllApplications(@Query() getApplicationsDto: ApplicationsQueryDto) {
     const { status, page, limit } = getApplicationsDto;
-    return await this.applications.getApplications(status, page, limit);
+    const [applications, count] = await this.applications.getApplicationsPage(
+      status,
+      page,
+      limit
+    );
+    return PaginatedResponseDto.from(applications, page, limit, count);
   }
 
   /**
@@ -48,6 +69,10 @@ export class ApplicationController {
    */
   @Get("admin/applications/:application")
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(ApplicationDto))
+  @ApiOkResponse({
+    type: ApplicationDto
+  })
   async getApplication(
     @Param("application", ParseIntPipe) applicationId: number
   ) {
@@ -59,6 +84,10 @@ export class ApplicationController {
    */
   @Post("admin/applications/:application/accept")
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(ApplicationDto))
+  @ApiOkResponse({
+    type: ApplicationDto
+  })
   async acceptApplication(
     @Param("application", ParseIntPipe) applicationId: number
   ) {
@@ -73,6 +102,10 @@ export class ApplicationController {
    */
   @Post("admin/applications/:application/reject")
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(ApplicationDto))
+  @ApiOkResponse({
+    type: ApplicationDto
+  })
   async rejectApplication(
     @Param("application", ParseIntPipe) applicationId: number
   ) {

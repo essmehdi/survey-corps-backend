@@ -14,16 +14,8 @@ import { PrismaService } from "src/prisma/prisma.service";
 @Injectable()
 export class QuestionsService {
   private readonly logger = new Logger(QuestionsService.name);
-  public static QUESTION_PROJECTION = {
-    id: true,
-    title: true,
-    description: true,
-    type: true,
-    required: true,
-    hasOther: true,
-    regex: true,
-    answers: { select: { id: true, title: true } },
-    nextQuestionId: true
+  private static ANSWERS_INCLUDE = {
+    answers: true
   };
 
   constructor(private prisma: PrismaService) {}
@@ -52,7 +44,8 @@ export class QuestionsService {
    */
   async getConditionalQuestion(sectionId: number) {
     return await this.prisma.question.findFirst({
-      where: { section: { id: sectionId }, conditions: { some: {} } }
+      where: { section: { id: sectionId }, conditions: { some: {} } },
+      include: QuestionsService.ANSWERS_INCLUDE
     });
   }
 
@@ -143,7 +136,7 @@ export class QuestionsService {
       const section = await this.prisma.questionSection.findUniqueOrThrow({
         where: { id: sectionId },
         include: {
-          questions: { select: QuestionsService.QUESTION_PROJECTION }
+          questions: { include: QuestionsService.ANSWERS_INCLUDE }
         }
       });
       return section.questions;
@@ -155,7 +148,7 @@ export class QuestionsService {
   async getQuestionsBySectionInOrder(sectionId: number) {
     var firstQuestion = await this.prisma.question.findFirst({
       where: { section: { id: sectionId }, previousQuestion: null },
-      select: QuestionsService.QUESTION_PROJECTION
+      include: QuestionsService.ANSWERS_INCLUDE
     });
     if (!firstQuestion) {
       return [];
@@ -165,7 +158,7 @@ export class QuestionsService {
     while (question && question.nextQuestionId) {
       question = await this.prisma.question.findFirst({
         where: { section: { id: sectionId }, id: question.nextQuestionId },
-        select: QuestionsService.QUESTION_PROJECTION
+        include: QuestionsService.ANSWERS_INCLUDE
       });
       if (question) results.push(question);
     }

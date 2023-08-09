@@ -14,6 +14,12 @@ export class MailService {
     this.resend = new Resend(config.get("RESEND_API_KEY"));
   }
 
+  /**
+   * Send an approval message to the applicant
+   * @param email The applicant's email
+   * @param fullname The applicant's fullname
+   * @param token The token to be used to access the form
+   */
   async sendApplicationApproved(
     email: string,
     fullname: string,
@@ -29,6 +35,12 @@ export class MailService {
     this.sendEmail(email, "Survey form application approved", html);
   }
 
+  /**
+   * Send a registration link to the newly added user to complete his registration
+   * @param email The new user's email
+   * @param firstname The new user's firstname
+   * @param token The token to be used to register the user
+   */
   async sendRegistrationEmail(email: string, firstname: string, token: string) {
     const registrationLink =
       this.config.get("FRONTEND_URL") + "/register/" + token;
@@ -41,6 +53,12 @@ export class MailService {
     this.sendEmail(email, "Registration link", html);
   }
 
+  /**
+   * Send a password reset link to the user
+   * @param email The user's email
+   * @param firstname The user's firstname
+   * @param token The token to be used to reset the password
+   */
   async sendPasswordResetEmail(
     email: string,
     firstname: string,
@@ -56,6 +74,11 @@ export class MailService {
     this.sendEmail(email, "Password reset link", html);
   }
 
+  /**
+   * Gets a template and populates it with the given context
+   * @param templateName The name of the template to be used
+   * @param context The context to be used to populate the template
+   */
   private getPopulatedTemplate(
     templateName: string,
     context: Record<string, any>

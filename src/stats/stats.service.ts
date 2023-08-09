@@ -24,13 +24,14 @@ export class StatsService {
 
   /**
    * Get personal stats for the connected user
+   * @param userId User's id
    */
-  async getPersonalStats(user: User) {
+  async getPersonalStats(userId: number) {
     const tokens = await this.prisma.token.count({
-      where: { user: { id: user.id } }
+      where: { user: { id: userId } }
     });
     const submissions = await this.prisma.token.count({
-      where: { user: { id: user.id }, submitted: true }
+      where: { user: { id: userId }, submitted: true }
     });
     return {
       tokens,

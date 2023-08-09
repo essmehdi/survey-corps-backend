@@ -17,7 +17,7 @@ export class UpdateUserDto {
   @IsNotEmpty()
   @IsOptional()
   @MaxLength(100)
-  firstname: string;
+  firstname?: string;
 
   /**
    * User's lastname
@@ -26,7 +26,7 @@ export class UpdateUserDto {
   @IsNotEmpty()
   @IsOptional()
   @MaxLength(100)
-  lastname: string;
+  lastname?: string;
 
   /**
    * User's email
@@ -35,12 +35,12 @@ export class UpdateUserDto {
   @IsNotEmpty()
   @IsOptional()
   @MaxLength(150)
-  email: string;
+  email?: string;
 
   /**
    * User's assigned privilege
    */
   @IsEnum(Privilege)
   @IsOptional()
-  privilege: Privilege;
+  privilege?: Privilege;
 }

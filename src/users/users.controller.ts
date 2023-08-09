@@ -4,7 +4,8 @@ import {
   Controller,
   Delete,
   Get,
-  Logger,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -16,14 +17,17 @@ import {
   Req,
   Request,
   Res,
-  StreamableFile,
   UnsupportedMediaTypeException,
   UploadedFile,
   UseGuards,
   UseInterceptors
 } from "@nestjs/common";
-import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { Prisma } from "@prisma/client";
+import {
+  ApiAcceptedResponse,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiTags
+} from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
 import { RequestWithUser } from "src/auth/request-with-user.interface";
@@ -35,10 +39,22 @@ import { UsersService } from "./users.service";
 import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
 import { ResetPasswordRequestDto } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
-import { createReadStream } from "fs";
 import { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { UpdatePersonalDataDto } from "./dto/update-personal-data.dto";
+import { plainToInstance } from "class-transformer";
+import { UserAdminDto } from "./dto/user-admin.dto";
+import { PaginatedResponse, paginatedResponse } from "src/utils/response";
+import { LeaderboardMember } from "./dto/leaderboard-member.dto";
+import { UserPublicDto } from "./dto/user-public.dto";
+import { User } from "@prisma/client";
+import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { MessageDto } from "src/utils/dto/message.dto";
+import { TokenValidity } from "src/utils/dto/token-validity.dto";
+import {
+  ApiOkPaginatedResponse,
+  PaginatedResponseDto
+} from "src/utils/dto/paginated-response.dto";
 
 @ApiTags("Users")
 @Controller("users")
@@ -50,9 +66,17 @@ export class UsersController {
    */
   @Get()
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(UserAdminDto))
+  @ApiOkPaginatedResponse(UserAdminDto)
   async allUsers(@Query() usersQueryDto: UsersQueryDto) {
     const { privilege, page, limit, search } = usersQueryDto;
-    return await this.users.getAllUsers(privilege, page, limit, search);
+    const [users, count] = await this.users.getAllUsersPage(
+      privilege,
+      page,
+      limit,
+      search
+    );
+    return paginatedResponse(users, page, limit, count);
   }
 
   /**
@@ -60,10 +84,12 @@ export class UsersController {
    */
   @Get("me")
   @UseGuards(CookieAuthenticationGuard)
-  async me(@Request() request: RequestWithUser) {
-    const { id, firstname, lastname, email, privilege, isActive } =
-      request.user;
-    return { id, firstname, lastname, email, privilege, isActive };
+  @UseInterceptors(new TransformDataInterceptor(UserPublicDto))
+  @ApiOkResponse({
+    type: () => UserPublicDto
+  })
+  me(@Request() request: RequestWithUser) {
+    return request.user;
   }
 
   /**
@@ -71,20 +97,21 @@ export class UsersController {
    */
   @Patch("me")
   @UseGuards(CookieAuthenticationGuard)
+  @UseInterceptors(new TransformDataInterceptor(UserPublicDto))
+  @ApiOkResponse({
+    type: () => UserPublicDto
+  })
   async updateMe(
     @Request() request: RequestWithUser,
     @Body() updateUserDto: UpdatePersonalDataDto
   ) {
     const { firstname, lastname } = updateUserDto;
-    await this.users.updateUser(
+    return await this.users.updateUser(
       request.user.id,
       firstname,
       lastname,
       request.user.email
     );
-    return {
-      message: "User updated successfully"
-    };
   }
 
   /**
@@ -114,7 +141,7 @@ export class UsersController {
   async updateProfilePicture(
     @Req() request: RequestWithUser,
     @UploadedFile() file: Express.Multer.File
-  ) {
+  ): Promise<MessageDto> {
     await this.users.updateProfilePicture(request.user.id, file.buffer);
     return {
       message: "Profile picture updated successfully"
@@ -126,7 +153,9 @@ export class UsersController {
    */
   @Delete("me/profile-picture")
   @UseGuards(CookieAuthenticationGuard)
-  async deleteProfilePicture(@Req() request: RequestWithUser) {
+  async deleteProfilePicture(
+    @Req() request: RequestWithUser
+  ): Promise<MessageDto> {
     await this.users.deleteProfilePicture(request.user.id);
     return {
       message: "Profile picture deleted successfully"
@@ -137,13 +166,15 @@ export class UsersController {
    * Registers a new user
    */
   @Post("register")
+  @HttpCode(HttpStatus.CREATED)
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(UserAdminDto))
+  @ApiCreatedResponse({
+    type: () => UserAdminDto
+  })
   async register(@Body() registerUserDto: RegisterUserDto) {
     const { firstname, lastname, email, privilege } = registerUserDto;
-    await this.users.createUser(firstname, lastname, email, privilege);
-    return {
-      message: "User successfully registered"
-    };
+    return await this.users.createUser(firstname, lastname, email, privilege);
   }
 
   /**
@@ -151,10 +182,18 @@ export class UsersController {
    */
   @Get("leaderboard")
   @UseGuards(CookieAuthenticationGuard)
+  @UseInterceptors(new TransformDataInterceptor(UserPublicDto))
+  @ApiOkPaginatedResponse(UserAdminDto)
   async leaderboard(@Query() paginatedQuery: PaginationQueryDto) {
-    return await this.users.getLeaderboard(
+    const [leaderboard, count] = await this.users.getLeaderboardPage(
       paginatedQuery.page,
       paginatedQuery.limit
+    );
+    return paginatedResponse(
+      leaderboard,
+      paginatedQuery.page,
+      paginatedQuery.limit,
+      count
     );
   }
 
@@ -162,7 +201,9 @@ export class UsersController {
    * Verifies if the provided token is valid (exists & not expired)
    */
   @Get("register/:token")
-  async verifyRegistrationToken(@Param("token", ParseUUIDPipe) token: string) {
+  async verifyRegistrationToken(
+    @Param("token", ParseUUIDPipe) token: string
+  ): Promise<TokenValidity> {
     return await this.users.verifyRegistrationToken(token);
   }
 
@@ -173,7 +214,7 @@ export class UsersController {
   async registerUserPassword(
     @Param("token", ParseUUIDPipe) token: string,
     @Body() registerUserPasswordDto: RegisterUserPasswordDto
-  ) {
+  ): Promise<MessageDto> {
     const { password } = registerUserPasswordDto;
     await this.users.registerUserPassword(token, password);
     return {
@@ -188,7 +229,7 @@ export class UsersController {
   async sendPasswordResetLink(
     @Req() request: RequestWithUser,
     @Body() resetPasswordDto: ResetPasswordRequestDto
-  ) {
+  ): Promise<MessageDto> {
     const { email } = resetPasswordDto;
     if (email) {
       await this.users.sendPasswordResetLink(email);
@@ -208,7 +249,7 @@ export class UsersController {
   @Get("reset-password/:token")
   async verifyForgotPasswordToken(
     @Param("token", ParseUUIDPipe) token: string
-  ) {
+  ): Promise<TokenValidity> {
     return await this.users.verifyForgotPasswordToken(token);
   }
 
@@ -219,7 +260,7 @@ export class UsersController {
   async resetPassword(
     @Param("token", ParseUUIDPipe) token: string,
     @Body() resetPasswordDto: ResetPasswordDto
-  ) {
+  ): Promise<MessageDto> {
     const { password } = resetPasswordDto;
     await this.users.resetUserPassword(token, password);
     return {
@@ -232,8 +273,13 @@ export class UsersController {
    */
   @Post(":id/resend")
   @UseGuards(AdminGuard)
-  async resendRegistrationLink(@Param("id", ParseIntPipe) id: number) {
-    return await this.users.resendRegistrationLink(id);
+  async resendRegistrationLink(
+    @Param("id", ParseIntPipe) id: number
+  ): Promise<MessageDto> {
+    await this.users.resendRegistrationLink(id);
+    return {
+      message: "Resent registration mail successfully"
+    };
   }
 
   /**
@@ -241,8 +287,12 @@ export class UsersController {
    */
   @Get(":id")
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(UserAdminDto))
+  @ApiOkResponse({
+    type: () => UserAdminDto
+  })
   async getUser(@Param("id", ParseIntPipe) id: number) {
-    return await this.users.getUserById(id, false);
+    return await this.users.getUserById(id);
   }
 
   /**
@@ -250,19 +300,29 @@ export class UsersController {
    */
   @Patch(":id")
   @UseGuards(AdminGuard)
+  @UseInterceptors(new TransformDataInterceptor(UserAdminDto))
+  @ApiOkResponse({
+    type: () => UserAdminDto
+  })
   async updateUser(
     @Param("id", ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto
   ) {
     const { firstname, lastname, email, privilege } = updateUserDto;
-    await this.users.updateUser(id, firstname, lastname, email, privilege);
-    return {
-      message: "User updated successfully"
-    };
+    return await this.users.updateUser(
+      id,
+      firstname,
+      lastname,
+      email,
+      privilege
+    );
   }
 
   @Get(":id/profile-picture")
   @UseGuards(CookieAuthenticationGuard)
+  @ApiOkResponse({
+    description: "Profile picture octet stream"
+  })
   async getProfilePicture(
     @Param("id", ParseIntPipe) id: number,
     @Res() response: Response
@@ -280,7 +340,9 @@ export class UsersController {
    */
   @Post(":id/disable")
   @UseGuards(AdminGuard)
-  async disableUser(@Param("id", ParseIntPipe) id: number) {
+  async disableUser(
+    @Param("id", ParseIntPipe) id: number
+  ): Promise<MessageDto> {
     await this.users.disableUser(id);
     return {
       message: "User account disabled successfully"
@@ -292,7 +354,7 @@ export class UsersController {
    */
   @Post(":id/enable")
   @UseGuards(AdminGuard)
-  async enableUser(@Param("id", ParseIntPipe) id: number) {
+  async enableUser(@Param("id", ParseIntPipe) id: number): Promise<MessageDto> {
     await this.users.enableUser(id);
     return {
       message: "User account enabled successfully"

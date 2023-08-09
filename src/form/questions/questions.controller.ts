@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Logger,
   Param,
   ParseIntPipe,
@@ -11,7 +13,7 @@ import {
   UseGuards,
   UseInterceptors
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddQuestionDto } from "./dto/add-question.dto";
 import { EditQuestionDto } from "./dto/edit-question.dto";
@@ -19,6 +21,10 @@ import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
 import { EditInterceptor } from "../interceptors/edit.interceptor";
 import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
+import { QuestionWithAnswersDto } from "./dto/question-with-answers.dto";
+import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { QuestionDto } from "./dto/question.dto";
+import { MessageDto } from "src/utils/dto/message.dto";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
@@ -32,6 +38,10 @@ export class QuestionsController {
    * Gets a question by ID
    */
   @Get(":question")
+  @UseInterceptors(new TransformDataInterceptor(QuestionWithAnswersDto))
+  @ApiOkResponse({
+    type: QuestionWithAnswersDto
+  })
   async getQuestion(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number
@@ -43,6 +53,11 @@ export class QuestionsController {
    * Gets all questions of a section
    */
   @Get()
+  @UseInterceptors(new TransformDataInterceptor(QuestionWithAnswersDto))
+  @ApiOkResponse({
+    type: QuestionWithAnswersDto,
+    isArray: true
+  })
   async getAllQuestions(@Param("section", ParseIntPipe) section: number) {
     return await this.questions.getQuestionsBySectionInOrder(section);
   }
@@ -51,6 +66,11 @@ export class QuestionsController {
    * Adds a question to a section
    */
   @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new TransformDataInterceptor(QuestionDto))
+  @ApiCreatedResponse({
+    type: QuestionDto
+  })
   async addQuestion(
     @Param("section", ParseIntPipe) section: number,
     @Body() addQuestionDto: AddQuestionDto
@@ -73,6 +93,10 @@ export class QuestionsController {
    * Edit a question in a section
    */
   @Patch(":question")
+  @UseInterceptors(new TransformDataInterceptor(QuestionDto))
+  @ApiOkResponse({
+    type: QuestionDto
+  })
   async editQuestion(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
@@ -100,7 +124,7 @@ export class QuestionsController {
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number,
     @Body() reorderQuestionDto: ReorderQuestionDto
-  ) {
+  ): Promise<MessageDto> {
     const { previous } = reorderQuestionDto;
     await this.questions.reorderQuestion(section, question, previous);
     return {
@@ -115,7 +139,7 @@ export class QuestionsController {
   async deleteQuestion(
     @Param("section", ParseIntPipe) section: number,
     @Param("question", ParseIntPipe) question: number
-  ) {
+  ): Promise<MessageDto> {
     await this.questions.deleteQuestion(section, question);
     return {
       message: "Question deleted successfully"
