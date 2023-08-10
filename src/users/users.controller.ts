@@ -23,12 +23,7 @@ import {
   UseGuards,
   UseInterceptors
 } from "@nestjs/common";
-import {
-  ApiAcceptedResponse,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiTags
-} from "@nestjs/swagger";
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { CookieAuthenticationGuard } from "src/auth/guards/cookie-authentication.guard";
 import { RequestWithUser } from "src/auth/request-with-user.interface";
@@ -43,12 +38,9 @@ import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { UpdatePersonalDataDto } from "./dto/update-personal-data.dto";
-import { plainToInstance } from "class-transformer";
 import { UserAdminDto } from "./dto/user-admin.dto";
-import { PaginatedResponse, paginatedResponse } from "src/utils/response";
 import { LeaderboardMember } from "./dto/leaderboard-member.dto";
 import { UserPublicDto } from "./dto/user-public.dto";
-import { User } from "@prisma/client";
 import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
 import { MessageDto } from "src/utils/dto/message.dto";
 import { TokenValidity } from "src/utils/dto/token-validity.dto";
@@ -77,7 +69,7 @@ export class UsersController {
       limit,
       search
     );
-    return paginatedResponse(users, page, limit, count);
+    return PaginatedResponseDto.from(users, page, limit, count);
   }
 
   /**

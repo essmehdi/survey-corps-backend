@@ -1,4 +1,4 @@
-import { applyDecorators } from "@nestjs/common";
+import { Logger, applyDecorators } from "@nestjs/common";
 import { ApiOkResponse, ApiProperty, getSchemaPath } from "@nestjs/swagger";
 
 export class PaginatedResponseDto<T> {
@@ -23,6 +23,8 @@ export class PaginatedResponseDto<T> {
   }
 
   static from<S>(list: S[], page: number, limit: number, count: number) {
+    Logger.debug(count);
+    Logger.debug(limit);
     return new PaginatedResponseDto(
       list,
       page,

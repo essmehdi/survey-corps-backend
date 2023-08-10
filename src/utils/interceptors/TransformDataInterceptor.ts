@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { ClassConstructor, plainToInstance } from "class-transformer";
 import { map } from "rxjs";
-import { PaginatedResponse, paginatedResponse } from "../response";
+import { PaginatedResponseDto } from "../dto/paginated-response.dto";
 
 @Injectable()
 export class TransformDataInterceptor<T> implements NestInterceptor {
@@ -17,8 +17,8 @@ export class TransformDataInterceptor<T> implements NestInterceptor {
       map((data) => {
         if (data.results && Array.isArray(data.results)) {
           const { results, currentPage, lastPage, total } =
-            data as PaginatedResponse<any>;
-          return paginatedResponse(
+            data as PaginatedResponseDto<any>;
+          return new PaginatedResponseDto(
             plainToInstance(this.classToUse, results),
             currentPage,
             lastPage,

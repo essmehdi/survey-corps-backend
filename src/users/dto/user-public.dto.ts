@@ -1,6 +1,6 @@
 import { ApiHideProperty, ApiProperty } from "@nestjs/swagger";
 import { Privilege, User } from "@prisma/client";
-import { Exclude, Expose } from "class-transformer";
+import { Exclude, Expose, Transform } from "class-transformer";
 
 export class UserPublicDto implements User {
   id: number;
@@ -22,4 +22,12 @@ export class UserPublicDto implements User {
   @Exclude()
   @ApiHideProperty()
   password: string;
+
+  @Exclude()
+  @ApiHideProperty()
+  _count: any;
+
+  @Expose()
+  @Transform(({ obj }) => obj._count.tokens)
+  submissions: number;
 }
