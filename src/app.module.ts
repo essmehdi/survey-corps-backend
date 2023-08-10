@@ -15,7 +15,8 @@ import { ServeStaticModule } from "@nestjs/serve-static";
 import { join } from "path";
 import { NotifierModule } from "./notifier/notifier.module";
 import { StatsModule } from "./stats/stats.module";
-import { ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
 
 @Module({
   imports: [
@@ -39,6 +40,13 @@ import { ThrottlerModule } from "@nestjs/throttler";
     })
   ],
   controllers: [AppController],
-  providers: [AppService, UsersService]
+  providers: [
+    AppService,
+    UsersService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    }
+  ]
 })
 export class AppModule {}

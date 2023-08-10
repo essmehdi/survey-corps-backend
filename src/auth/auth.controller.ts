@@ -15,6 +15,7 @@ import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
 import { UserPublicDto } from "src/users/dto/user-public.dto";
 import { MessageDto } from "src/utils/dto/message.dto";
+import { Throttle } from "@nestjs/throttler";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -26,6 +27,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(LogInWithCredentialsGuard)
   @UseInterceptors(new TransformDataInterceptor(UserPublicDto))
+  @Throttle(5, 60 * 60) // 5 requests per hour
   @ApiOkResponse({
     type: UserPublicDto
   })
