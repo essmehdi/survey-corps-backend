@@ -38,6 +38,25 @@ export class UsersService {
       ...zxcvbnEnPackage.dictionary
     }
   };
+  private static SELECT_SUBMISSIONS = {
+    id: true,
+    firstname: true,
+    lastname: true,
+    email: true,
+    isActive: true,
+    password: true,
+    privilege: true,
+    registered: true,
+    _count: {
+      select: {
+        tokens: {
+          where: {
+            submitted: true
+          }
+        }
+      }
+    }
+  };
 
   constructor(
     private prisma: PrismaService,
@@ -93,6 +112,10 @@ export class UsersService {
    * @returns The list of the users and the total count
    */
   private async getUsersAndCount(userFindManyArgs: Prisma.UserFindManyArgs) {
+    userFindManyArgs.select = {
+      ...(userFindManyArgs.select ?? {}),
+      ...UsersService.SELECT_SUBMISSIONS
+    };
     return await this.xprisma.$transaction([
       this.xprisma.user.findMany(userFindManyArgs) as PrismaPromise<
         (User & { _count?: any })[]
@@ -158,7 +181,8 @@ export class UsersService {
   async getUserById(id: number) {
     try {
       return await this.xprisma.user.findUniqueOrThrow({
-        where: { id }
+        where: { id },
+        select: UsersService.SELECT_SUBMISSIONS
       });
     } catch (error) {
       this.handleQueryException(error);
@@ -173,7 +197,8 @@ export class UsersService {
   async getUserByEmail(email: string) {
     try {
       return await this.xprisma.user.findUniqueOrThrow({
-        where: { email }
+        where: { email },
+        select: UsersService.SELECT_SUBMISSIONS
       });
     } catch (error) {
       this.handleQueryException(error);
@@ -221,17 +246,6 @@ export class UsersService {
       where: {
         tokens: {
           some: {}
-        }
-      },
-      include: {
-        _count: {
-          select: {
-            tokens: {
-              where: {
-                submitted: true
-              }
-            }
-          }
         }
       },
       take: limit,

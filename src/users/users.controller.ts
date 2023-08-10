@@ -6,6 +6,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -182,14 +183,15 @@ export class UsersController {
    */
   @Get("leaderboard")
   @UseGuards(CookieAuthenticationGuard)
-  @UseInterceptors(new TransformDataInterceptor(UserPublicDto))
-  @ApiOkPaginatedResponse(UserAdminDto)
+  @UseInterceptors(new TransformDataInterceptor(LeaderboardMember))
+  @ApiOkPaginatedResponse(LeaderboardMember)
   async leaderboard(@Query() paginatedQuery: PaginationQueryDto) {
     const [leaderboard, count] = await this.users.getLeaderboardPage(
       paginatedQuery.page,
       paginatedQuery.limit
     );
-    return paginatedResponse(
+    Logger.debug(JSON.stringify(leaderboard));
+    return PaginatedResponseDto.from(
       leaderboard,
       paginatedQuery.page,
       paginatedQuery.limit,
