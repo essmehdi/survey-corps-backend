@@ -6,7 +6,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Logger,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -182,7 +181,6 @@ export class UsersController {
       paginatedQuery.page,
       paginatedQuery.limit
     );
-    Logger.debug(JSON.stringify(leaderboard));
     return PaginatedResponseDto.from(
       leaderboard,
       paginatedQuery.page,

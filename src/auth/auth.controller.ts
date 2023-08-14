@@ -1,6 +1,7 @@
 import {
   Controller,
   HttpCode,
+  Logger,
   Post,
   Request,
   Response,
@@ -20,6 +21,7 @@ import { Throttle } from "@nestjs/throttler";
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   /**
    * Log in a user
    */
@@ -48,6 +50,7 @@ export class AuthController {
     @Request() request: RequestWithUser,
     @Response() response: ExpressResponse
   ) {
+    this.logger.verbose(`User ${request.user.email} logging out`);
     // @ts-ignore
     request.logout(request.user, (err: any, next: any) => {
       if (err) next(err);

@@ -12,11 +12,16 @@ import { Request } from "express";
 
 @Injectable()
 export class CookieAuthenticationGuard implements CanActivate {
+  private readonly logger = new Logger(CookieAuthenticationGuard.name);
+
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest() as
       | Request
       | RequestWithUser;
     if (!request.isAuthenticated()) {
+      this.logger.verbose(
+        `Unauthenticated request to ${request.path}: ${request.ip}`
+      );
       throw new UnauthorizedException({
         statusCode: HttpStatus.UNAUTHORIZED,
         message: "You are not logged in",

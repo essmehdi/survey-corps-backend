@@ -16,7 +16,8 @@ import { join } from "path";
 import { NotifierModule } from "./notifier/notifier.module";
 import { StatsModule } from "./stats/stats.module";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { UnsuccessfulInterceptor } from "./utils/interceptors/UnsuccessfulInterceptor";
 
 @Module({
   imports: [
@@ -46,6 +47,10 @@ import { APP_GUARD } from "@nestjs/core";
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: UnsuccessfulInterceptor
     }
   ]
 })
