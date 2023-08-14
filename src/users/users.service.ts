@@ -312,7 +312,7 @@ export class UsersService {
       });
       // Check if it's not expired
       if (
-        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        new Date().getTime() - t.createdAt.getTime() >
         UsersService.REGISTRATION_TOKEN_LIFESPAN
       ) {
         return {
@@ -351,7 +351,7 @@ export class UsersService {
         include: { user: true }
       });
       if (
-        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        new Date().getTime() - t.createdAt.getTime() >
         UsersService.REGISTRATION_TOKEN_LIFESPAN
       ) {
         throw new ForbiddenException("Expired token");
@@ -488,7 +488,7 @@ export class UsersService {
         include: { user: true }
       });
       if (
-        new Date().getMilliseconds() - t.createdAt.getMilliseconds() >
+        new Date().getTime() - t.createdAt.getTime() >
         UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
       ) {
         throw new ForbiddenException("Expired token");
@@ -515,7 +515,7 @@ export class UsersService {
 
   private async checkForgotPasswordTokenValidity(createdAt: Date) {
     return (
-      new Date().getMilliseconds() - createdAt.getMilliseconds() <
+      new Date().getTime() - createdAt.getTime() <
       UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
     );
   }
