@@ -1,6 +1,6 @@
 import { ApplicationStatus } from "@prisma/client";
 import { IsEnum, IsNotEmpty, IsString } from "class-validator";
-import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
+import { PaginationQueryDto } from "src/misc/dto/pagination-query.dto";
 
 export enum StatusOptions {
   RESPONDED = "RESPONDED",

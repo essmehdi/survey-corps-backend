@@ -13,9 +13,9 @@ import { LogInWithCredentialsGuard } from "./guards/login-with-credentials.guard
 import { RequestWithUser } from "./request-with-user.interface";
 import { Response as ExpressResponse } from "express";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { TransformDataInterceptor } from "src/misc/interceptors/TransformDataInterceptor";
 import { UserPublicDto } from "src/users/dto/user-public.dto";
-import { MessageDto } from "src/utils/dto/message.dto";
+import { MessageDto } from "src/misc/dto/message.dto";
 import { Throttle } from "@nestjs/throttler";
 
 @ApiTags("Authentication")

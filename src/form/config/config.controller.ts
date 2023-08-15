@@ -1,7 +1,7 @@
 import { Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { FormConfigService } from "./config.service";
 import { AdminGuard } from "src/auth/guards/admin.guard";
-import { MessageDto } from "src/utils/dto/message.dto";
+import { MessageDto } from "src/misc/dto/message.dto";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 
 @ApiTags("Form config")

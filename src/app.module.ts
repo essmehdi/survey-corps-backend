@@ -17,7 +17,7 @@ import { NotifierModule } from "./notifier/notifier.module";
 import { StatsModule } from "./stats/stats.module";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
-import { UnsuccessfulInterceptor } from "./utils/interceptors/UnsuccessfulInterceptor";
+import { UnsuccessfulInterceptor } from "./misc/interceptors/UnsuccessfulInterceptor";
 
 @Module({
   imports: [

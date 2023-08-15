@@ -13,7 +13,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaError } from "prisma-error-enum";
 import { PrivilegeFilter } from "./dto/users-query.dto";
-import { convertToTsquery } from "src/utils/strings";
+import { convertToTsquery } from "src/misc/strings";
 import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
 import * as bcrypt from "bcrypt";

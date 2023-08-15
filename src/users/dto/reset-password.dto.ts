@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsString, MaxLength, MinLength } from "class-validator";
-import { Match } from "src/utils/validators";
+import { Match } from "src/misc/validators";
 
 export class ResetPasswordDto {
   @IsString()
