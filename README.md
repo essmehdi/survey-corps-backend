@@ -44,7 +44,7 @@ Now synchronize your database with the Prisma schema.
 npx prisma migrate dev
 ```
 
-For emails, you will need to setup [Resend]("https://resend.com/") in the `.env` file as mentioned below.
+For emails, you will need to setup [Resend]("https://resend.com/") in the `.env` file as mentioned above.
 
 Finally, launch the dev server:
 
