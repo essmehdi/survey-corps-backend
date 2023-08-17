@@ -17,7 +17,7 @@ Thus, you will need Node.js installed and a PostgreSQL database. We use [`yarn`]
 Clone the repository:
 
 ```shell
-$ git clone https://github.com/essmehdi/survey-corps-backend
+git clone https://github.com/essmehdi/survey-corps-backend
 ```
 
 Copy the `.env.example` file, rename it to `.env` and fill it with the same properties as the example file:
@@ -35,13 +35,13 @@ Copy the `.env.example` file, rename it to `.env` and fill it with the same prop
 Install the necessary packages:
 
 ```shell
-$ yarn install
+yarn install
 ```
 
 Now synchronize your database with the Prisma schema.
 
 ```shell
-$ npx prisma migrate dev
+npx prisma migrate dev
 ```
 
 For emails, you will need to setup [Resend]("https://resend.com/") in the `.env` file as mentioned below.
@@ -49,7 +49,7 @@ For emails, you will need to setup [Resend]("https://resend.com/") in the `.env`
 Finally, launch the dev server:
 
 ```shell
-$ yarn start:dev
+yarn start:dev
 ```
 
 And you are good to go!
