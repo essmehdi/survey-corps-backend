@@ -5,7 +5,7 @@ import {
   MaxLength,
   MinLength
 } from "class-validator";
-import { Match } from "src/misc/validators";
+import { Match } from "src/common/validators";
 
 export class RegisterUserPasswordDto {
   @IsString()

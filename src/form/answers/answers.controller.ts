@@ -19,9 +19,9 @@ import { ApiCreatedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { EditAnswerDto } from "./dto/edit-answer.dto";
 import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
 import { EditInterceptor } from "../interceptors/edit.interceptor";
-import { MessageDto } from "src/misc/dto/message.dto";
+import { MessageDto } from "src/common/dto/message.dto";
 import { AnswerDto } from "./dto/answer.dto";
-import { TransformDataInterceptor } from "src/misc/interceptors/TransformDataInterceptor";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 
 @ApiTags("Admin form", "Answers")
 @Controller("admin/sections/:section/questions/:question/answers")

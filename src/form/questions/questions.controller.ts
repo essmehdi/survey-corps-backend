@@ -22,9 +22,9 @@ import { QuestionsService } from "./questions.service";
 import { EditInterceptor } from "../interceptors/edit.interceptor";
 import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
 import { QuestionWithAnswersDto } from "./dto/question-with-answers.dto";
-import { TransformDataInterceptor } from "src/misc/interceptors/TransformDataInterceptor";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 import { QuestionDto } from "./dto/question.dto";
-import { MessageDto } from "src/misc/dto/message.dto";
+import { MessageDto } from "src/common/dto/message.dto";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
