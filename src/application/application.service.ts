@@ -11,6 +11,7 @@ import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { StatusOptions } from "./dto/applications-query.dto";
 import { MailService } from "src/mail/mail.service";
+import { ResourceNotFoundException } from "src/common/exceptions/resource-not-found.exception";
 
 @Injectable()
 export class ApplicationService {
@@ -21,23 +22,11 @@ export class ApplicationService {
     private mail: MailService
   ) {}
 
-  private handleQueryException(error: any) {
-    this.logger.error(error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (
-        error.code === PrismaError.UniqueConstraintViolation &&
-        error.meta?.target[0] === "email"
-      ) {
-        throw new ConflictException("This email has already applied");
-      } else if (error.code === PrismaError.RecordsNotFound) {
-        throw new NotFoundException("The requested application was not found");
-      } else if (error.code === PrismaError.RecordDoesNotExist) {
-        throw new NotFoundException("The requested application does not exist");
-      }
-    }
-    throw new InternalServerErrorException("An error has occured");
-  }
-
+  /**
+   * Get applications and count
+   * @param applicationWhereInput Prisma where input for the application
+   * @returns List: [applications, count]
+   */
   private async getApplicationsAndCount(
     applicationWhereInput: Prisma.ApplicationFindManyArgs
   ) {
@@ -52,15 +41,20 @@ export class ApplicationService {
   /**
    * Get an application by ID
    * @param applicationId ID of the application
+   *
+   * @throws {ResourceNotFoundException} If the application does not exist
    */
   async getApplication(applicationId: number) {
-    try {
-      return await this.prisma.application.findUniqueOrThrow({
-        where: { id: applicationId }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
+    const application = await this.prisma.application.findUnique({
+      where: { id: applicationId }
+    });
+
+    // Check if application exists
+    if (!application) {
+      throw new ResourceNotFoundException(`Application ${applicationId}`);
     }
+
+    return application;
   }
 
   /**
@@ -69,13 +63,9 @@ export class ApplicationService {
    * @param email Email of the applicant
    */
   async addApplication(fullname: string, email: string) {
-    try {
-      return await this.prisma.application.create({
-        data: { fullname, email }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+    return await this.prisma.application.create({
+      data: { fullname, email }
+    });
   }
 
   /**
@@ -129,23 +119,19 @@ export class ApplicationService {
       };
     }
 
-    try {
-      const app = await this.prisma.$transaction(async (tx) => {
-        const application = await tx.application.update({
-          where: { id },
-          include: { token: true },
-          data
-        });
-        await this.mail.sendApplicationApproved(
-          application.email,
-          application.fullname,
-          application.token.token
-        );
-        return application;
+    const app = await this.prisma.$transaction(async (tx) => {
+      const application = await tx.application.update({
+        where: { id },
+        include: { token: true },
+        data
       });
-      return app;
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+      await this.mail.sendApplicationApproved(
+        application.email,
+        application.fullname,
+        application.token.token
+      );
+      return application;
+    });
+    return app;
   }
 }

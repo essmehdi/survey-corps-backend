@@ -9,23 +9,13 @@ import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
 import { TokenStateFilter } from "./dto/tokens-query.dto";
+import { ResourceNotFoundException } from "src/common/exceptions/resource-not-found.exception";
 
 @Injectable()
 export class TokensService {
   private readonly logger = new Logger(TokensService.name);
 
   constructor(private prisma: PrismaService) {}
-
-  private handleQueryException(error: any) {
-    this.logger.error(error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === PrismaError.RecordDoesNotExist)
-        throw new NotFoundException("Token does not exist");
-      else if (error.code === PrismaError.RecordsNotFound)
-        throw new NotFoundException("Token not found");
-    }
-    throw new InternalServerErrorException("An error has occured");
-  }
 
   private async getTokensAndCount(tokenFindManyArgs: Prisma.TokenFindManyArgs) {
     return await this.prisma.$transaction([
@@ -65,15 +55,17 @@ export class TokensService {
   /**
    * Gets the token by ID
    * @param tokenId ID of the token
+   *
+   * @throws {ResourceNotFoundException} If the token is not found
    */
   async getToken(tokenId: number) {
-    try {
-      return await this.prisma.token.findUniqueOrThrow({
-        where: { id: tokenId }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
+    const token = await this.prisma.token.findUnique({
+      where: { id: tokenId }
+    });
+    if (!token) {
+      throw new ResourceNotFoundException(`Token ${tokenId}`);
     }
+    return token;
   }
 
   /**
@@ -82,18 +74,14 @@ export class TokensService {
    * @returns
    */
   async removeToken(user: User, tokenId: number) {
-    try {
-      const whereCondition =
-        user.privilege === Privilege.ADMIN
-          ? { id: tokenId }
-          : { id: tokenId, user: { id: user.id } };
+    const whereCondition =
+      user.privilege === Privilege.ADMIN
+        ? { id: tokenId }
+        : { id: tokenId, user: { id: user.id } };
 
-      await this.prisma.token.delete({
-        where: whereCondition
-      });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+    await this.prisma.token.delete({
+      where: whereCondition
+    });
   }
 
   /**

@@ -44,7 +44,7 @@ export class SessionController {
     type: SessionSectionDto
   })
   async getSection(@Param("section", ParseIntPipe) id: number) {
-    return await this.sections.section(id);
+    return await this.sections.getSection(id);
   }
 
   /**
