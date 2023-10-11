@@ -1,6 +1,6 @@
 import { Type } from "class-transformer";
 import { IsEnum, IsNumber, IsOptional, Min } from "class-validator";
-import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
+import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
 
 export enum TokenStateFilter {
   ALL = "ALL",

@@ -1,5 +1,11 @@
-import { IsNotEmpty, IsString, Matches, MaxLength, MinLength } from "class-validator";
-import { Match } from "src/utils/validators";
+import {
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength
+} from "class-validator";
+import { Match } from "src/common/validators";
 
 export class RegisterUserPasswordDto {
   @IsString()

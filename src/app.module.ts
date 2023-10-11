@@ -16,8 +16,10 @@ import { join } from "path";
 import { NotifierModule } from "./notifier/notifier.module";
 import { StatsModule } from "./stats/stats.module";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
-import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
-import { UnsuccessfulInterceptor } from "./utils/interceptors/UnsuccessfulInterceptor";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { UnsuccessfulInterceptor } from "./common/interceptors/UnsuccessfulInterceptor";
+import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
+import { CustomBaseExceptionFilter } from "./common/filters/custom-base-exception.filter";
 
 @Module({
   imports: [
@@ -51,6 +53,14 @@ import { UnsuccessfulInterceptor } from "./utils/interceptors/UnsuccessfulInterc
     {
       provide: APP_INTERCEPTOR,
       useClass: UnsuccessfulInterceptor
+    },
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter
+    },
+    {
+      provide: APP_FILTER,
+      useClass: CustomBaseExceptionFilter
     }
   ]
 })

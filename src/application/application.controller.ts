@@ -21,9 +21,9 @@ import {
   ApplicationsQueryDto,
   StatusOptions
 } from "./dto/applications-query.dto";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 import { ApplicationDto } from "./dto/application.dto";
-import { PaginatedResponseDto } from "src/utils/dto/paginated-response.dto";
+import { PaginatedResponseDto } from "src/common/dto/paginated-response.dto";
 
 @ApiTags("Alumni application")
 @Controller()

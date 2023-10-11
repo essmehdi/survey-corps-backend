@@ -19,12 +19,12 @@ import { AddQuestionDto } from "./dto/add-question.dto";
 import { EditQuestionDto } from "./dto/edit-question.dto";
 import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
-import { EditInterceptor } from "../interceptors/edit.interceptor";
-import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
+import { EditInterceptor } from "../common/interceptors/edit.interceptor";
+import { UnpublishedFormGuard } from "../common/guards/unpublished-form.guard";
 import { QuestionWithAnswersDto } from "./dto/question-with-answers.dto";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 import { QuestionDto } from "./dto/question.dto";
-import { MessageDto } from "src/utils/dto/message.dto";
+import { MessageDto } from "src/common/dto/message.dto";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")

@@ -19,12 +19,12 @@ import {
 } from "./dto/change-next-section.dto";
 import { SectionsService } from "./sections.service";
 import { EditSectionDto } from "./dto/edit-section.dto";
-import { UnpublishedFormGuard } from "../guards/unpublished-form.guard";
-import { EditInterceptor } from "../interceptors/edit.interceptor";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { UnpublishedFormGuard } from "../common/guards/unpublished-form.guard";
+import { EditInterceptor } from "../common/interceptors/edit.interceptor";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 import { SectionWithQuestionsDto } from "./dto/section-with-questions.dto";
 import { SectionDto } from "./dto/section.dto";
-import { MessageDto } from "src/utils/dto/message.dto";
+import { MessageDto } from "src/common/dto/message.dto";
 
 @ApiTags("Admin form", "Sections")
 @Controller("admin/sections")
@@ -56,7 +56,7 @@ export class SectionsController {
     type: SectionWithQuestionsDto
   })
   async getSection(@Param("section", ParseIntPipe) sectionId: number) {
-    return await this.sections.section(sectionId);
+    return await this.sections.getSection(sectionId);
   }
 
   /**

@@ -31,7 +31,7 @@ import { RegisterUserDto } from "./dto/register-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersQueryDto } from "./dto/users-query.dto";
 import { UsersService } from "./users.service";
-import { PaginationQueryDto } from "src/utils/dto/pagination-query.dto";
+import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
 import { ResetPasswordRequestDto } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { Response } from "express";
@@ -40,13 +40,13 @@ import { UpdatePersonalDataDto } from "./dto/update-personal-data.dto";
 import { UserAdminDto } from "./dto/user-admin.dto";
 import { LeaderboardMember } from "./dto/leaderboard-member.dto";
 import { UserPublicDto } from "./dto/user-public.dto";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
-import { MessageDto } from "src/utils/dto/message.dto";
-import { TokenValidity } from "src/utils/dto/token-validity.dto";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
+import { MessageDto } from "src/common/dto/message.dto";
+import { TokenValidity } from "src/common/dto/token-validity.dto";
 import {
   ApiOkPaginatedResponse,
   PaginatedResponseDto
-} from "src/utils/dto/paginated-response.dto";
+} from "src/common/dto/paginated-response.dto";
 
 @ApiTags("Users")
 @Controller("users")

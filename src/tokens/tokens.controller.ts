@@ -24,11 +24,11 @@ import { TokensService } from "./tokens.service";
 import {
   ApiOkPaginatedResponse,
   PaginatedResponseDto
-} from "src/utils/dto/paginated-response.dto";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+} from "src/common/dto/paginated-response.dto";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 import { TokenWithUserDto } from "./dto/token-with-user.dto";
 import { TokenDto } from "./dto/token.dto";
-import { MessageDto } from "src/utils/dto/message.dto";
+import { MessageDto } from "src/common/dto/message.dto";
 
 @ApiTags("Tokens")
 @Controller("tokens")

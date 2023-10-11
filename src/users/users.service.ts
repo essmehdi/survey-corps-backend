@@ -13,7 +13,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { PrismaError } from "prisma-error-enum";
 import { PrivilegeFilter } from "./dto/users-query.dto";
-import { convertToTsquery } from "src/utils/strings";
+import { convertToTsquery } from "src/common/strings";
 import { MailService } from "src/mail/mail.service";
 import { randomUUID } from "crypto";
 import * as bcrypt from "bcrypt";
@@ -23,6 +23,11 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
 import * as zxcvbnCommonPackage from "@zxcvbn-ts/language-common";
 import * as zxcvbnEnPackage from "@zxcvbn-ts/language-en";
+import { WeakPasswordException } from "./exceptions/weak-password.exception";
+import { TokenExpiredException } from "./exceptions/token-expired.exception";
+import { AlreadyRegisteredException } from "./exceptions/already-registered.exception";
+import { EmailAlreadyExistsException } from "./exceptions/email-already-exists.exception";
+import { ResourceNotFoundException } from "src/common/exceptions/resource-not-found.exception";
 
 @Injectable()
 export class UsersService {
@@ -60,7 +65,6 @@ export class UsersService {
 
   constructor(
     private prisma: PrismaService,
-    private config: ConfigService,
     private mail: MailService
   ) {
     this.xprisma = this.getExtendedClient();
@@ -86,24 +90,6 @@ export class UsersService {
         }
       }
     });
-  }
-
-  /**
-   * Handle service query exception
-   */
-  private handleQueryException(error: any) {
-    this.logger.error(error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (
-        error.code === PrismaError.UniqueConstraintViolation &&
-        error.meta?.target[0] === "email"
-      ) {
-        throw new ConflictException("This email already exists");
-      } else if (error.code === PrismaError.RecordsNotFound) {
-        throw new NotFoundException("User not found");
-      }
-    }
-    throw new InternalServerErrorException("An error has occured");
   }
 
   /**
@@ -147,62 +133,62 @@ export class UsersService {
     limit: number,
     search?: string
   ) {
-    try {
-      const whereQuery: Prisma.UserWhereInput =
-        privilegeFilter !== PrivilegeFilter.ALL
-          ? { privilege: privilegeFilter }
-          : {};
+    const whereQuery: Prisma.UserWhereInput =
+      privilegeFilter !== PrivilegeFilter.ALL
+        ? { privilege: privilegeFilter }
+        : {};
 
-      if (search) {
-        const tsquery = convertToTsquery(search);
-        whereQuery.OR = [
-          { firstname: { search: tsquery } },
-          { lastname: { search: tsquery } },
-          { email: { search: tsquery } }
-        ];
-      }
-
-      return await this.getUsersAndCount({
-        where: whereQuery,
-        take: limit,
-        skip: limit * (page - 1),
-        orderBy: { id: "asc" }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
+    if (search) {
+      const tsquery = convertToTsquery(search);
+      whereQuery.OR = [
+        { firstname: { search: tsquery } },
+        { lastname: { search: tsquery } },
+        { email: { search: tsquery } }
+      ];
     }
+
+    return await this.getUsersAndCount({
+      where: whereQuery,
+      take: limit,
+      skip: limit * (page - 1),
+      orderBy: { id: "asc" }
+    });
   }
 
   /**
    * Gets a user by id
    * @param id User id
    * @returns The user
+   *
+   * @throws {ResourceNotFoundException} If the user is not found
    */
   async getUserById(id: number) {
-    try {
-      return await this.xprisma.user.findUniqueOrThrow({
-        where: { id },
-        select: UsersService.SELECT_SUBMISSIONS
-      });
-    } catch (error) {
-      this.handleQueryException(error);
+    const user = await this.xprisma.user.findUnique({
+      where: { id },
+      select: UsersService.SELECT_SUBMISSIONS
+    });
+    if (!user) {
+      throw new ResourceNotFoundException(`User ${id}`);
     }
+    return user;
   }
 
   /**
    * Gets a user by email
    * @param email User email
    * @returns The user
+   *
+   * @throws {ResourceNotFoundException} If the user is not found
    */
   async getUserByEmail(email: string) {
-    try {
-      return await this.xprisma.user.findUniqueOrThrow({
-        where: { email },
-        select: UsersService.SELECT_SUBMISSIONS
-      });
-    } catch (error) {
-      this.handleQueryException(error);
+    const user = await this.xprisma.user.findUniqueOrThrow({
+      where: { email },
+      select: UsersService.SELECT_SUBMISSIONS
+    });
+    if (!user) {
+      throw new ResourceNotFoundException(`User <${email}>`);
     }
+    return user;
   }
 
   /**
@@ -212,6 +198,9 @@ export class UsersService {
    * @param lastname New lastname
    * @param email New email
    * @param privilege New privilege
+   *
+   * @throws {EmailAlreadyExistsException} If the email already exists
+   * @throws {ResourceNotFoundException} If the user is not found
    */
   async updateUser(
     id: number,
@@ -220,6 +209,17 @@ export class UsersService {
     email?: string,
     privilege?: Privilege
   ) {
+    // Check if the email exists
+    if (email) {
+      const userWithEmail = await this.xprisma.user.findUnique({
+        where: { email }
+      });
+      if (!userWithEmail) {
+        throw new EmailAlreadyExistsException();
+      }
+    }
+
+    // Update user
     try {
       return await this.xprisma.user.update({
         where: { id },
@@ -231,7 +231,13 @@ export class UsersService {
         }
       });
     } catch (error) {
-      this.handleQueryException(error);
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PrismaError.RecordDoesNotExist
+      ) {
+        throw new ResourceNotFoundException(`User ${id}`);
+      }
+      throw error;
     }
   }
 
@@ -273,31 +279,36 @@ export class UsersService {
     privilege: Privilege = "MEMBER"
   ) {
     const token = randomUUID();
-    try {
-      return await this.xprisma.$transaction(async (tx) => {
-        // Create the user
-        const newUser = await tx.user.create({
-          data: {
-            firstname,
-            lastname,
-            email,
-            privilege,
-            registrationToken: {
-              create: {
-                token
-              }
+
+    // Check if the email exists
+    const userWithEmail = await this.xprisma.user.findUnique({
+      where: { email }
+    });
+    if (userWithEmail) {
+      throw new EmailAlreadyExistsException();
+    }
+
+    return await this.xprisma.$transaction(async (tx) => {
+      // Create the user
+      const newUser = await tx.user.create({
+        data: {
+          firstname,
+          lastname,
+          email,
+          privilege,
+          registrationToken: {
+            create: {
+              token
             }
           }
-        });
-
-        // Send mail
-        await this.mail.sendRegistrationEmail(email, newUser.firstname, token);
-
-        return newUser;
+        }
       });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+
+      // Send mail
+      await this.mail.sendRegistrationEmail(email, newUser.firstname, token);
+
+      return newUser;
+    });
   }
 
   /**
@@ -306,109 +317,87 @@ export class UsersService {
    * @returns An object with "valid" field & "expired" field if it is not valid
    */
   async verifyRegistrationToken(token: string) {
-    try {
-      const t = await this.xprisma.registrationToken.findUniqueOrThrow({
-        where: { token }
-      });
-      // Check if it's not expired
-      if (
-        new Date().getTime() - t.createdAt.getTime() >
-        UsersService.REGISTRATION_TOKEN_LIFESPAN
-      ) {
-        return {
-          valid: false,
-          expired: true
-        };
-      }
+    const t = await this.xprisma.registrationToken.findUnique({
+      where: { token }
+    });
+    if (!t) {
       return {
-        valid: true
+        valid: false,
+        expired: false
       };
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PrismaError.RecordsNotFound
-      ) {
-        return {
-          valid: false
-        };
-      }
-      this.handleQueryException(error);
     }
+    // Check if it's not expired
+    if (
+      new Date().getTime() - t.createdAt.getTime() >
+      UsersService.REGISTRATION_TOKEN_LIFESPAN
+    ) {
+      return {
+        valid: false,
+        expired: true
+      };
+    }
+    return {
+      valid: true
+    };
   }
 
   /**
    * Completes user registration by setting a password
    * @param token The registration token
    * @param password The user provided password
+   *
+   * @throws {WeakPasswordException} If the password is too weak
+   * @throws {TokenExpiredException} If the token is expired
    */
   async registerUserPassword(token: string, password: string) {
     if (!this.checkPasswordStrength(password)) {
-      throw new BadRequestException("A strong password is required");
+      throw new WeakPasswordException();
     }
-    try {
-      const t = await this.xprisma.registrationToken.findUniqueOrThrow({
-        where: { token },
-        include: { user: true }
-      });
-      if (
-        new Date().getTime() - t.createdAt.getTime() >
-        UsersService.REGISTRATION_TOKEN_LIFESPAN
-      ) {
-        throw new ForbiddenException("Expired token");
-      }
-      await this.xprisma.user.update({
-        where: { id: t.user.id },
-        data: {
-          password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
-          isActive: true,
-          registrationToken: {
-            delete: true
-          }
+    const t = await this.xprisma.registrationToken.findUniqueOrThrow({
+      where: { token },
+      include: { user: true }
+    });
+    if (
+      new Date().getTime() - t.createdAt.getTime() >
+      UsersService.REGISTRATION_TOKEN_LIFESPAN
+    ) {
+      throw new TokenExpiredException();
+    }
+    await this.xprisma.user.update({
+      where: { id: t.user.id },
+      data: {
+        password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
+        isActive: true,
+        registrationToken: {
+          delete: true
         }
-      });
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PrismaError.RecordsNotFound
-      ) {
-        throw new ForbiddenException("Invalid token");
-      } else {
-        throw new InternalServerErrorException("An error has occured");
       }
-    }
+    });
   }
 
   /**
    * Resends the registration link to the user
    * @param userId User's id
+   *
+   * @throws {AlreadyRegisteredException} If you call this function on an already registered user
    */
   async resendRegistrationLink(userId: number) {
-    try {
-      const user = await this.xprisma.user.findUniqueOrThrow({
-        where: { id: userId },
-        include: { registrationToken: true }
-      });
-      if (user.isActive || user.password !== null) {
-        throw new UnprocessableEntityException(
-          "This user is already registered"
-        );
-      }
-      const newToken = randomUUID();
-      await this.xprisma.registrationToken.update({
-        where: { id: user.registrationToken.id },
-        data: {
-          token: newToken,
-          createdAt: new Date()
-        }
-      });
-      await this.mail.sendRegistrationEmail(
-        user.email,
-        user.firstname,
-        newToken
-      );
-    } catch (error) {
-      this.handleQueryException(error);
+    const user = await this.xprisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { registrationToken: true }
+    });
+    if (user.isActive || user.password !== null) {
+      throw new AlreadyRegisteredException();
     }
+    const newToken = randomUUID();
+    await this.xprisma.registrationToken.update({
+      where: { id: user.registrationToken.id },
+      data: {
+        token: newToken,
+        createdAt: new Date()
+      }
+    });
+    await this.mail.sendRegistrationEmail(user.email, user.firstname, newToken);
   }
 
   /**
@@ -417,31 +406,25 @@ export class UsersService {
    * @returns An object with "valid" field & "expired" field if it is not valid
    */
   async verifyForgotPasswordToken(token: string) {
-    try {
-      const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
-        where: { token }
-      });
-      // Check if it's not expired
-      if (!this.checkForgotPasswordTokenValidity(t.createdAt)) {
-        return {
-          valid: false,
-          expired: true
-        };
-      }
+    const t = await this.prisma.forgotPasswordToken.findUnique({
+      where: { token }
+    });
+    if (!t) {
       return {
-        valid: true
+        valid: false,
+        expired: false
       };
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PrismaError.RecordsNotFound
-      ) {
-        return {
-          valid: false
-        };
-      }
-      this.handleQueryException(error);
     }
+    // Check if it's not expired
+    if (!this.checkForgotPasswordTokenValidity(t.createdAt)) {
+      return {
+        valid: false,
+        expired: true
+      };
+    }
+    return {
+      valid: true
+    };
   }
 
   /**
@@ -480,37 +463,33 @@ export class UsersService {
    */
   async resetUserPassword(token: string, password: string) {
     if (!this.checkPasswordStrength(password)) {
-      throw new BadRequestException("A strong password is required");
+      throw new WeakPasswordException();
     }
-    try {
-      const t = await this.prisma.forgotPasswordToken.findUniqueOrThrow({
-        where: { token },
-        include: { user: true }
-      });
-      if (
-        new Date().getTime() - t.createdAt.getTime() >
-        UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
-      ) {
-        throw new ForbiddenException("Expired token");
-      }
-      await this.prisma.user.update({
-        where: { id: t.user.id },
-        data: {
-          password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
-          forgotPasswordToken: {
-            delete: true
-          }
+    const t = await this.prisma.forgotPasswordToken.findUnique({
+      where: { token },
+      include: { user: true }
+    });
+    if (!t) {
+      return {
+        valid: false,
+        expired: false
+      };
+    }
+    if (
+      new Date().getTime() - t.createdAt.getTime() >
+      UsersService.PASSWORD_RESET_TOKEN_LIFESPAN
+    ) {
+      throw new TokenExpiredException();
+    }
+    await this.prisma.user.update({
+      where: { id: t.user.id },
+      data: {
+        password: bcrypt.hashSync(password, bcrypt.genSaltSync()),
+        forgotPasswordToken: {
+          delete: true
         }
-      });
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PrismaError.RecordsNotFound
-      ) {
-        throw new ForbiddenException("Invalid token");
       }
-      this.handleQueryException(error);
-    }
+    });
   }
 
   private async checkForgotPasswordTokenValidity(createdAt: Date) {
@@ -525,16 +504,12 @@ export class UsersService {
    * @param userId User's id
    */
   async disableUser(userId: number) {
-    try {
-      await this.xprisma.user.update({
-        where: { id: userId },
-        data: {
-          isActive: false
-        }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+    await this.xprisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false
+      }
+    });
   }
 
   /**
@@ -542,16 +517,12 @@ export class UsersService {
    * @param userId User's id
    */
   async enableUser(userId: number) {
-    try {
-      await this.xprisma.user.update({
-        where: { id: userId },
-        data: {
-          isActive: true
-        }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+    await this.xprisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: true
+      }
+    });
   }
 
   /**
@@ -560,22 +531,18 @@ export class UsersService {
    * @returns The buffer array of the picture
    */
   async getProfilePictureBuffer(userId: number) {
-    try {
-      const user = await this.prisma.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: {
-          profilePicture: true
-        }
-      });
-      if (!user.profilePicture || user.profilePicture.length === 0) {
-        return readFileSync(
-          join(process.cwd(), "static", "default-profile-pic.jpg")
-        );
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        profilePicture: true
       }
-      return user.profilePicture;
-    } catch (err) {
-      this.handleQueryException(err);
+    });
+    if (!user.profilePicture || user.profilePicture.length === 0) {
+      return readFileSync(
+        join(process.cwd(), "static", "default-profile-pic.jpg")
+      );
     }
+    return user.profilePicture;
   }
 
   /**
@@ -584,16 +551,12 @@ export class UsersService {
    * @param buffer The new picture buffer
    */
   async updateProfilePicture(userId: number, buffer: Buffer) {
-    try {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          profilePicture: buffer
-        }
-      });
-    } catch (err) {
-      this.handleQueryException(err);
-    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        profilePicture: buffer
+      }
+    });
   }
 
   /**
@@ -601,15 +564,11 @@ export class UsersService {
    * @param userId User id
    */
   async deleteProfilePicture(userId: number) {
-    try {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          profilePicture: null
-        }
-      });
-    } catch (err) {
-      this.handleQueryException(err);
-    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        profilePicture: null
+      }
+    });
   }
 }

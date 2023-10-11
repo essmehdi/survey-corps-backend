@@ -11,7 +11,7 @@ import { UnusedTokenGuard } from "src/tokens/guards/unusedToken.guard";
 import { QuestionsService } from "../questions/questions.service";
 import { SectionsService } from "../sections/sections.service";
 import { SessionSectionDto } from "./dto/session-section.dto";
-import { TransformDataInterceptor } from "src/utils/interceptors/TransformDataInterceptor";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
 import { QuestionWithAnswersDto } from "../questions/dto/question-with-answers.dto";
 
 @ApiTags("Form session")
@@ -44,7 +44,7 @@ export class SessionController {
     type: SessionSectionDto
   })
   async getSection(@Param("section", ParseIntPipe) id: number) {
-    return await this.sections.section(id);
+    return await this.sections.getSection(id);
   }
 
   /**
