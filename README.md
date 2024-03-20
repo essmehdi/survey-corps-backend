@@ -1,5 +1,12 @@
 # ENSIAS Bridge Survey API
 
+
+
+|![Dashboard](/.github/screenshots/dashboard.png)   |![Link scren](/.github/screenshots/links.png)
+|-----|----|
+|![Dashboard](/.github/screenshots/form.png)   |![Link scren](/.github/screenshots/form-question-edit.png)
+
+
 This repository hosts the ENSIAS Bridge Survey API: A survey management API for the Bridge Club at ENSIAS. For now, it is used mainly for the Survey initiative started by the club to gather information about ENSIAS alumnis and their experience at the school and in the professional world.
 
 ## Launching the API
