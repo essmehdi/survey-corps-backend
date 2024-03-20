@@ -2,46 +2,20 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
-  UnauthorizedException
+  NotFoundException
 } from "@nestjs/common";
-import {
-  Prisma,
-  PrismaClient,
-  Privilege,
-  Submission,
-  Token,
-  User
-} from "@prisma/client";
-import { NotFoundError } from "@prisma/client/runtime";
+import { Prisma, Privilege, User } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { PrismaError } from "prisma-error-enum";
 import { PrismaService } from "src/prisma/prisma.service";
-import { paginatedResponse } from "src/utils/response";
 import { TokenStateFilter } from "./dto/tokens-query.dto";
+import { ResourceNotFoundException } from "src/common/exceptions/resource-not-found.exception";
 
 @Injectable()
 export class TokensService {
-  private readonly NO_USER_PROJECTION: Prisma.TokenSelect = {
-    id: true,
-    token: true,
-    createdAt: true,
-    submitted: true
-  };
   private readonly logger = new Logger(TokensService.name);
 
   constructor(private prisma: PrismaService) {}
-
-  private handleQueryException(error: any) {
-    this.logger.error(error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === PrismaError.RecordDoesNotExist)
-        throw new NotFoundException("Token does not exist");
-      else if (error.code === PrismaError.RecordsNotFound)
-        throw new NotFoundException("Token not found");
-    }
-    throw new InternalServerErrorException("An error has occured");
-  }
 
   private async getTokensAndCount(tokenFindManyArgs: Prisma.TokenFindManyArgs) {
     return await this.prisma.$transaction([
@@ -81,15 +55,17 @@ export class TokensService {
   /**
    * Gets the token by ID
    * @param tokenId ID of the token
+   *
+   * @throws {ResourceNotFoundException} If the token is not found
    */
   async getToken(tokenId: number) {
-    try {
-      return await this.prisma.token.findUniqueOrThrow({
-        where: { id: tokenId }
-      });
-    } catch (error) {
-      this.handleQueryException(error);
+    const token = await this.prisma.token.findUnique({
+      where: { id: tokenId }
+    });
+    if (!token) {
+      throw new ResourceNotFoundException(`Token ${tokenId}`);
     }
+    return token;
   }
 
   /**
@@ -98,32 +74,65 @@ export class TokensService {
    * @returns
    */
   async removeToken(user: User, tokenId: number) {
-    try {
-      const whereCondition =
-        user.privilege === Privilege.ADMIN
-          ? { id: tokenId }
-          : { id: tokenId, user: { id: user.id } };
+    const whereCondition =
+      user.privilege === Privilege.ADMIN
+        ? { id: tokenId }
+        : { id: tokenId, user: { id: user.id } };
 
-      await this.prisma.token.delete({
-        where: whereCondition
-      });
-    } catch (error) {
-      this.handleQueryException(error);
-    }
+    await this.prisma.token.delete({
+      where: whereCondition
+    });
   }
 
   /**
-   * Gets all created tokens
+   * Gets all created tokens page
+   * @param page Number of page
    * @param limit Number of elements in a page
+   * @param stateFilter Filter by token state
    */
-  async allTokens(page: number = 1, limit: number = 30) {
-    const [tokens, count] = await this.getTokensAndCount({
+  async allTokens(
+    page: number = 1,
+    limit: number = 30,
+    stateFilter: TokenStateFilter = TokenStateFilter.ALL,
+    search?: string
+  ) {
+    const stateFilterArgs =
+      stateFilter === TokenStateFilter.ALL
+        ? {}
+        : stateFilter === TokenStateFilter.PENDING
+        ? { submitted: false }
+        : { submitted: true };
+
+    return await this.getTokensAndCount({
+      where: {
+        ...(search
+          ? {
+              user: {
+                OR: search
+                  .replace(/\s+/g, " ")
+                  .trim()
+                  .split(" ")
+                  .map((word) => [
+                    {
+                      firstname: { contains: word, mode: "insensitive" }
+                    },
+                    {
+                      lastname: { contains: word, mode: "insensitive" }
+                    }
+                  ])
+                  .flatMap((x) => x) as Prisma.UserWhereInput[]
+              }
+            }
+          : {}),
+        ...stateFilterArgs
+      },
       take: limit,
       skip: limit * (page - 1),
-      orderBy: { id: "asc" }
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: true
+      }
     });
-
-    return paginatedResponse(tokens, page, limit, count);
   }
 
   /**
@@ -145,15 +154,12 @@ export class TokensService {
         ? { submitted: false }
         : { submitted: true };
 
-    const [tokens, count] = await this.getTokensAndCount({
+    return await this.getTokensAndCount({
       where: { userId, ...stateFilterArgs },
-      select: this.NO_USER_PROJECTION,
       take: limit,
       skip: limit * (page - 1),
       orderBy: [{ submitted: "asc" }, { createdAt: "desc" }]
     });
-
-    return paginatedResponse(tokens, page, limit, count);
   }
 
   /**
@@ -166,20 +172,5 @@ export class TokensService {
     });
 
     return !!validToken;
-  }
-
-  /**
-   * Adds an 'isSubmitted' boolean based on the token submissions number
-   * @param tokens Array of tokens to modify
-   * @returns The array of tokens with the added field
-   */
-  getTokensWithSubmission(
-    tokens: Partial<Token & { submissions: Partial<Submission>[] }>[]
-  ) {
-    return tokens.map((token) => {
-      const submissions = token.submissions.length;
-      delete token["submissions"];
-      return { ...token, isSubmitted: submissions > 0 };
-    });
   }
 }

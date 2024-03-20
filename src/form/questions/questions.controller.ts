@@ -1,21 +1,36 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "src/auth/guards/admin.guard";
 import { AddQuestionDto } from "./dto/add-question.dto";
 import { EditQuestionDto } from "./dto/edit-question.dto";
+import { ReorderQuestionDto } from "./dto/reorder-question.dto";
 import { QuestionsService } from "./questions.service";
+import { EditInterceptor } from "../common/interceptors/edit.interceptor";
+import { UnpublishedFormGuard } from "../common/guards/unpublished-form.guard";
+import { QuestionWithAnswersDto } from "./dto/question-with-answers.dto";
+import { TransformDataInterceptor } from "src/common/interceptors/TransformDataInterceptor";
+import { QuestionDto } from "./dto/question.dto";
+import { MessageDto } from "src/common/dto/message.dto";
 
 @ApiTags("Admin form", "Questions")
 @Controller("admin/sections/:section/questions")
 @UseGuards(AdminGuard)
+@UseGuards(UnpublishedFormGuard)
+@UseInterceptors(EditInterceptor)
 export class QuestionsController {
   constructor(private questions: QuestionsService) {}
 
@@ -23,9 +38,13 @@ export class QuestionsController {
    * Gets a question by ID
    */
   @Get(":question")
+  @UseInterceptors(new TransformDataInterceptor(QuestionWithAnswersDto))
+  @ApiOkResponse({
+    type: QuestionWithAnswersDto
+  })
   async getQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number
   ) {
     return await this.questions.getQuestionById(section, question);
   }
@@ -34,7 +53,12 @@ export class QuestionsController {
    * Gets all questions of a section
    */
   @Get()
-  async getAllQuestions(@Param("section") section: number) {
+  @UseInterceptors(new TransformDataInterceptor(QuestionWithAnswersDto))
+  @ApiOkResponse({
+    type: QuestionWithAnswersDto,
+    isArray: true
+  })
+  async getAllQuestions(@Param("section", ParseIntPipe) section: number) {
     return await this.questions.getQuestionsBySectionInOrder(section);
   }
 
@@ -42,8 +66,13 @@ export class QuestionsController {
    * Adds a question to a section
    */
   @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new TransformDataInterceptor(QuestionDto))
+  @ApiCreatedResponse({
+    type: QuestionDto
+  })
   async addQuestion(
-    @Param("section") section: number,
+    @Param("section", ParseIntPipe) section: number,
     @Body() addQuestionDto: AddQuestionDto
   ) {
     const newQuestion = await this.questions.addQuestion(
@@ -52,6 +81,7 @@ export class QuestionsController {
       section,
       addQuestionDto.required,
       addQuestionDto.previous,
+      addQuestionDto.description,
       addQuestionDto.hasOther,
       addQuestionDto.regex
     );
@@ -63,33 +93,53 @@ export class QuestionsController {
    * Edit a question in a section
    */
   @Patch(":question")
+  @UseInterceptors(new TransformDataInterceptor(QuestionDto))
+  @ApiOkResponse({
+    type: QuestionDto
+  })
   async editQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number,
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
     @Body() editQuestionDto: EditQuestionDto
   ) {
-    const { title, type, required, hasOther } = editQuestionDto;
-    await this.questions.editQuestion(
+    const { title, description, type, required, hasOther, regex } =
+      editQuestionDto;
+    return await this.questions.editQuestion(
       section,
       question,
       title,
+      description,
       type,
       required,
-      hasOther
+      hasOther,
+      regex
     );
+  }
+
+  /**
+   * Changes the order of a question in a section
+   */
+  @Patch(":question/reorder")
+  async reorderQuestion(
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number,
+    @Body() reorderQuestionDto: ReorderQuestionDto
+  ): Promise<MessageDto> {
+    const { previous } = reorderQuestionDto;
+    await this.questions.reorderQuestion(section, question, previous);
     return {
-      message: "Question modified successfully"
+      message: "Question reordered successfully"
     };
   }
 
   /**
    * Deletes a question in a section
    */
-  @Patch(":question")
+  @Delete(":question")
   async deleteQuestion(
-    @Param("section") section: number,
-    @Param("question") question: number
-  ) {
+    @Param("section", ParseIntPipe) section: number,
+    @Param("question", ParseIntPipe) question: number
+  ): Promise<MessageDto> {
     await this.questions.deleteQuestion(section, question);
     return {
       message: "Question deleted successfully"

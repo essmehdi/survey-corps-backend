@@ -3,11 +3,13 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
+    "assets": [{ "include": "mail/templates/**/*" }],
     "plugins": [
       {
         "name": "@nestjs/swagger",
         "options": {
-          "introspectComments": true
+          "introspectComments": true,
+          "classValidatorShim": true
         }
       }
     ]

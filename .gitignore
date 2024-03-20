@@ -36,3 +36,7 @@ lerna-debug.log*
 
 # Environment variables
 .env
+.env.test
+
+# Compodoc documentation
+/documentation

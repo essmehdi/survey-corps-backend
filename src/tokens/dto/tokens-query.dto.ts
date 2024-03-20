@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
 import { IsEnum, IsNumber, IsOptional, Min } from "class-validator";
+import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
 
 export enum TokenStateFilter {
   ALL = "ALL",
@@ -7,25 +8,7 @@ export enum TokenStateFilter {
   SUBMITTED = "SUBMITTED"
 }
 
-export class TokensQueryDto {
-  /**
-   * Page number
-   */
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  @IsOptional()
-  page: number;
-
-  /**
-   * Number of elements in a single page
-   */
-  @IsNumber()
-  @Type(() => Number)
-  @Min(10)
-  @IsOptional()
-  limit: number;
-
+export class TokensQueryDto extends PaginationQueryDto {
   /**
    * Filter by token state
    */

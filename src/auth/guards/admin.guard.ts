@@ -1,12 +1,20 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
-import { Observable } from "rxjs";
+import { ExecutionContext, Injectable, Logger } from "@nestjs/common";
+import { CookieAuthenticationGuard } from "./cookie-authentication.guard";
 
 @Injectable()
-export class AdminGuard implements CanActivate {
-  canActivate(
-    context: ExecutionContext
-  ): boolean | Promise<boolean> | Observable<boolean> {
+export class AdminGuard extends CookieAuthenticationGuard {
+  private readonly adminLogger = new Logger(AdminGuard.name);
+
+  canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
-    return request.isAuthenticated() && request.user.privilege === "ADMIN";
+    if (!super.canActivate(context)) {
+      this.adminLogger.verbose(
+        `Admin resource access denied for ${
+          request.user?.email ?? "unknown user"
+        }`
+      );
+      return false;
+    }
+    return request.user.privilege === "ADMIN";
   }
 }

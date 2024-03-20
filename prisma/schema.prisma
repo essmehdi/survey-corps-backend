@@ -1,9 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["filteredRelationCount", "clientExtensions", "fullTextSearch"]
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -11,100 +8,132 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model FormConfig {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+}
+
+model RegistrationToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+  createdAt DateTime @default(now())
+}
+
+model ForgotPasswordToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+  createdAt DateTime @default(now())
+}
+
 model User {
-  id          Int         @id @default(autoincrement())
-  fullname    String  
-  email       String      @unique
-  password    String  
-  privilege   Privilege   @default(MEMBER)
-  tokens      Token[]
+  id                  Int                  @id @default(autoincrement())
+  firstname           String               @db.VarChar(100)
+  lastname            String               @db.VarChar(100)
+  email               String               @unique @db.VarChar(150)
+  profilePicture      Bytes?
+  password            String?              @db.VarChar(250)
+  privilege           Privilege            @default(MEMBER)
+  isActive            Boolean              @default(false)
+  tokens              Token[]
+  registrationToken   RegistrationToken?
+  forgotPasswordToken ForgotPasswordToken?
 }
 
 model Condition {
-  id            Int               @id @default(autoincrement())
-  question      Question          @relation(fields: [questionId], references: [id])
-  questionId    Int               
-  answer        Answer            @relation(fields: [answerId], references: [id])
-  answerId      Int               @unique
-  nextSection   QuestionSection   @relation("NextSection", fields: [nextSectionId], references: [id])
+  id            Int             @id @default(autoincrement())
+  questionId    Int
+  answerId      Int?            @unique
   nextSectionId Int
-
-  @@unique([questionId, answerId])
+  answer        Answer?         @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  nextSection   QuestionSection @relation("NextSection", fields: [nextSectionId], references: [id], onDelete: Cascade)
+  question      Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 model QuestionSection {
-  id                Int               @id @default(autoincrement())
-  title             String
-  questions         Question[]  
-  conditioned       Condition[]       @relation("NextSection")
-  
-  // This is for direct section succession
-  nextSection       QuestionSection?  @relation(name: "SectionSuccession", fields: [nextSectionId], references: [id])
-  nextSectionId     Int?              @unique
-  previousSection   QuestionSection?  @relation(name: "SectionSuccession")
+  id               Int               @id @default(autoincrement())
+  title            String            @db.VarChar(150)
+  description      String?           @db.VarChar(500)
+  nextSectionId    Int?
+  conditioned      Condition[]       @relation("NextSection")
+  questions        Question[]
+  nextSection      QuestionSection?  @relation("SectionSuccession", fields: [nextSectionId], references: [id], onDelete: SetNull)
+  previousSections QuestionSection[] @relation("SectionSuccession")
 }
 
 model Question {
-  id                Int               @id @default(autoincrement())
-  title             String
-  required          Boolean
-  type              QuestionType
-  hasOther          Boolean?
-  submissions       Submission[]
-  answers           Answer[]
-  regex             String?
-
-  nextQuestion      Question?         @relation(name: "QuestionSuccession", fields: [nextQuestionId], references: [id])
-  nextQuestionId    Int?              @unique  
-  previousQuestion  Question?         @relation(name: "QuestionSuccession")
-  
-  section           QuestionSection   @relation(fields: [sectionId], references: [id])
-  sectionId         Int
-
-  conditions        Condition[]
+  id               Int             @id @default(autoincrement())
+  title            String          @db.VarChar(150)
+  description      String?         @db.VarChar(500)
+  required         Boolean
+  type             QuestionType
+  hasOther         Boolean?
+  regex            String?         @db.VarChar(300)
+  nextQuestionId   Int?            @unique
+  sectionId        Int
+  answers          Answer[]
+  conditions       Condition[]
+  nextQuestion     Question?       @relation("QuestionSuccession", fields: [nextQuestionId], references: [id])
+  previousQuestion Question?       @relation("QuestionSuccession")
+  section          QuestionSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  submissions      Submission[]
 }
 
 model Answer {
   id          Int          @id @default(autoincrement())
-  title       String
-  question    Question     @relation(fields: [questionId], references: [id])
+  title       String       @db.VarChar(100)
   questionId  Int
-  submissions Submission[]
+  question    Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
   condition   Condition?
+  submissions Submission[]
 
   @@unique([questionId, title])
 }
 
 model Submission {
-  id            Int       @id @default(autoincrement())
-  question      Question  @relation(fields: [questionId], references: [id])
-  questionId    Int
-  answer        Answer?   @relation(fields: [answerId], references: [id])
-  answerId      Int?
-  submissionId  String    
-  other         String?
-  submittedAt   DateTime  @default(now())
+  id           Int      @id @default(autoincrement())
+  questionId   Int
+  answerId     Int?
+  other        String?  @db.VarChar(500)
+  submittedAt  DateTime @default(now())
+  submissionId String
+  answer       Answer?  @relation(fields: [answerId], references: [id], onDelete: NoAction)
+  question     Question @relation(fields: [questionId], references: [id], onDelete: NoAction)
 
   @@unique([questionId, answerId, submissionId])
 }
 
 model Token {
-  id            Int           @id @default(autoincrement())
-  token         String        @unique
-  user          User?         @relation(fields: [userId], references: [id])
-  userId        Int?
-  submitted     Boolean       @default(false)
-  application   Application?
-  createdAt     DateTime      @default(now())
+  id          Int          @id @default(autoincrement())
+  token       String       @unique
+  userId      Int?
+  createdAt   DateTime     @default(now())
+  submitted   Boolean      @default(false)
+  application Application?
+  user        User?        @relation(fields: [userId], references: [id])
 }
 
 model Application {
-  id          Int                   @id @default(autoincrement())
-  fullname    String
-  email       String                @unique
-  status      ApplicationStatus     @default(PENDING)
-  token       Token?                @relation(fields: [tokenId], references: [id])
-  tokenId     Int?                  @unique
+  id        Int               @id @default(autoincrement())
+  fullname  String            @db.VarChar(200)
+  email     String            @unique @db.VarChar(150)
+  createdAt DateTime          @default(now())
+  status    ApplicationStatus @default(PENDING)
+  tokenId   Int?              @unique
+  token     Token?            @relation(fields: [tokenId], references: [id])
+}
+
+model session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
 }
 
 enum ApplicationStatus {

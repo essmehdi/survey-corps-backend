@@ -1,73 +1,55 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# ENSIAS Bridge Survey API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This repository hosts the ENSIAS Bridge Survey API: A survey management API for the Bridge Club at ENSIAS. For now, it is used mainly for the Survey initiative started by the club to gather information about ENSIAS alumnis and their experience at the school and in the professional world.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Launching the API
 
-## Description
+If you want to contribute or just try the API, follow the setup below to launch the server.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+This API is built using:
 
-## Installation
+- [**Nest.js**](https://nestjs.com/) for the application
+- [**Prisma**](https://wwww.prisma.io/) as an ORM
+- [**PostgreSQL**](https://www.postgresql.org/) for the database
 
-```bash
-$ npm install
+Thus, you will need Node.js installed and a PostgreSQL database. We use [`yarn`](https://yarnpkg.com) as the package manager so you will need it also to continue.
+
+Clone the repository:
+
+```shell
+git clone https://github.com/essmehdi/survey-corps-backend
 ```
 
-## Running the app
+Copy the `.env.example` file, rename it to `.env` and fill it with the same properties as the example file:
 
-```bash
-# development
-$ npm run start
+- `API_URL`: URL where the API is hosted
+- `FRONTEND_URL`: URL of the frontend
+- `PORT`: Port used by the server
+- `DATABASE_URL`: Connect string to the PostgreSQL database
+- `SESSION_SECRET`: Express session secret
+- `RESEND_API_KEY`: Resend API key
+- `MAIL_ADDRESS`: Sender mail
+- `THROTTLE_TTL`: Request throttling TTL
+- `THROTTLE_LIMIT`: Number of requests in the TTL
 
-# watch mode
-$ npm run start:dev
+Install the necessary packages:
 
-# production mode
-$ npm run start:prod
+```shell
+yarn install
 ```
 
-## Test
+Now synchronize your database with the Prisma schema.
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```shell
+npx prisma migrate dev
 ```
 
-## Support
+For emails, you will need to setup [Resend]("https://resend.com/") in the `.env` file as mentioned above.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Finally, launch the dev server:
 
-## Stay in touch
+```shell
+yarn start:dev
+```
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+And you are good to go!

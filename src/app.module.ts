@@ -6,10 +6,20 @@ import { UsersService } from "./users/users.service";
 import { UsersModule } from "./users/users.module";
 import { FormModule } from "./form/form.module";
 import { AuthModule } from "./auth/auth.module";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ApplicationModule } from "./application/application.module";
 import { PrismaService } from "./prisma/prisma.service";
 import { TokensModule } from "./tokens/tokens.module";
+import { MailModule } from "./mail/mail.module";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { join } from "path";
+import { NotifierModule } from "./notifier/notifier.module";
+import { StatsModule } from "./stats/stats.module";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { UnsuccessfulInterceptor } from "./common/interceptors/UnsuccessfulInterceptor";
+import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
+import { CustomBaseExceptionFilter } from "./common/filters/custom-base-exception.filter";
 
 @Module({
   imports: [
@@ -19,9 +29,39 @@ import { TokensModule } from "./tokens/tokens.module";
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
     ApplicationModule,
-    TokensModule
+    TokensModule,
+    MailModule,
+    NotifierModule,
+    StatsModule,
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ([{
+        ttl: config.get("THROTTLE_TTL"),
+        limit: config.get("THROTTLE_LIMIT")
+      }])
+    })
   ],
   controllers: [AppController],
-  providers: [AppService, UsersService]
+  providers: [
+    AppService,
+    UsersService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: UnsuccessfulInterceptor
+    },
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter
+    },
+    {
+      provide: APP_FILTER,
+      useClass: CustomBaseExceptionFilter
+    }
+  ]
 })
 export class AppModule {}

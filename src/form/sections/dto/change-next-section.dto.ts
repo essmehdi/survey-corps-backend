@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsNumber,
   IsObject,
+  IsOptional,
   IsPositive,
   registerDecorator,
   ValidateIf,
@@ -12,11 +13,11 @@ import {
 } from "class-validator";
 
 export enum NextSectionType {
-  SECTION = "section",
-  CONDITION = "condition"
+  SECTION = "SECTION",
+  CONDITION = "CONDITION"
 }
 
-function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
+function IsAnswerIdToSectionIdObject(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
       name: "isNumberToNumberObject",
@@ -27,7 +28,7 @@ function IsNumberToNumberObject(validationOptions?: ValidationOptions) {
       validator: {
         validate(value: any) {
           return (
-            Object.keys(value).every(Number.isNaN) &&
+            Object.keys(value).every((v) => Number.isNaN(v) || v === "other") &&
             Object.values(value).every(Number.isNaN)
           );
         }
@@ -48,8 +49,8 @@ export class ConditionDto {
    * Mapping of the answers and next section
    */
   @IsObject()
-  @IsNumberToNumberObject()
-  answers: Record<number, number>;
+  @IsAnswerIdToSectionIdObject()
+  answers: Record<number | "other", number>;
 }
 
 export class ChangeNextSectionDto {
@@ -62,8 +63,11 @@ export class ChangeNextSectionDto {
   /**
    * Should be specified if type is 'SECTION'
    */
-  @ValidateIf((self) => self.type === NextSectionType.SECTION)
-  section?: number;
+  @ValidateIf(
+    (self, value) => self.type === NextSectionType.SECTION && value !== null
+  )
+  @IsNumber()
+  section?: number | null;
 
   /**
    * Should be specified if type is 'CONDITION'

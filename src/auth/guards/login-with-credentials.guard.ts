@@ -1,4 +1,9 @@
-import { ExecutionContext, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException
+} from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { Observable } from "rxjs";
 
@@ -9,6 +14,10 @@ export class LogInWithCredentialsGuard extends AuthGuard("local") {
 
     const request = context.switchToHttp().getRequest();
     await super.logIn(request);
+
+    if (request.user && !request.user.isActive) {
+      throw new BadRequestException("Invalid credentials");
+    }
 
     return true;
   }

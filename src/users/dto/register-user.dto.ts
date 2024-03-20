@@ -4,22 +4,33 @@ import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
-  IsString
+  IsString,
+  MaxLength
 } from "class-validator";
 
 export class RegisterUserDto {
   /**
-   * User's fullname
+   * User's firstname
    */
   @IsString()
   @IsNotEmpty()
-  fullname: string;
+  @MaxLength(100)
+  firstname: string;
+
+  /**
+   * User's lastname
+   */
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  lastname: string;
 
   /**
    * User's email
    */
   @IsEmail()
   @IsNotEmpty()
+  @MaxLength(150)
   email: string;
 
   /**

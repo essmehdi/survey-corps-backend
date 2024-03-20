@@ -1,5 +1,11 @@
 import { Type } from "class-transformer";
-import { IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import {
+  ArrayNotEmpty,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  ValidateNested
+} from "class-validator";
 import { SubmissionDto } from "./submission.dto";
 
 export class AddSubmissionDto {
@@ -7,6 +13,7 @@ export class AddSubmissionDto {
    * Form answers submissions
    */
   @ValidateNested()
+  @ArrayNotEmpty()
   @Type(() => SubmissionDto)
   submissions: SubmissionDto[];
 
@@ -15,5 +22,6 @@ export class AddSubmissionDto {
    */
   @IsString()
   @IsNotEmpty()
+  @IsUUID(4)
   token: string;
 }
