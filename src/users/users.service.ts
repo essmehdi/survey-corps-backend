@@ -214,7 +214,7 @@ export class UsersService {
       const userWithEmail = await this.xprisma.user.findUnique({
         where: { email }
       });
-      if (!userWithEmail) {
+      if (userWithEmail) {
         throw new EmailAlreadyExistsException();
       }
     }
