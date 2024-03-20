@@ -102,13 +102,13 @@ export class MailService {
    */
   private async sendEmail(email: string, subject: string, html: string) {
     try {
-      const data = await this.resend.emails.send({
+      const sentEmail = await this.resend.emails.send({
         to: email,
         from: `ENSIAS Bridge Survey Team <${this.config.get("MAIL_ADDRESS")}>`,
         subject,
         html
       });
-      this.logger.log(`Email sent: ${data.id}`);
+      this.logger.log(`Email sent: ${sentEmail.data.id}`);
     } catch (error) {
       this.logger.error(error);
     }

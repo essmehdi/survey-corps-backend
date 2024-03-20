@@ -36,10 +36,10 @@ import { CustomBaseExceptionFilter } from "./common/filters/custom-base-exceptio
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => ({
+      useFactory: async (config: ConfigService) => ([{
         ttl: config.get("THROTTLE_TTL"),
         limit: config.get("THROTTLE_LIMIT")
-      })
+      }])
     })
   ],
   controllers: [AppController],

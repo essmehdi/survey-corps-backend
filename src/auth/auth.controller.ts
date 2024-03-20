@@ -29,7 +29,12 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(LogInWithCredentialsGuard)
   @UseInterceptors(new TransformDataInterceptor(UserPublicDto))
-  @Throttle(5, 60 * 60) // 5 requests per hour
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 3600
+    }
+  }) // 5 requests per hour
   @ApiOkResponse({
     type: UserPublicDto
   })

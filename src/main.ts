@@ -1,11 +1,11 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import * as session from "express-session";
-import * as passport from "passport";
+import session from "express-session";
+import passport from "passport";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import * as PostgreSQLStore from "connect-pg-simple";
+import PostgreSQLStore from "connect-pg-simple";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { join } from "path";
 
